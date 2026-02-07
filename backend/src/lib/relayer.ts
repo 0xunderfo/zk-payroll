@@ -6,7 +6,7 @@
 import type { Address, Hex } from "viem";
 import type { EIP3009Authorization } from "./escrow";
 
-const RELAYER_API = "https://api.relayer.plasma.to";
+const RELAYER_API = "https://dev.api.relayer.plasma.to";
 
 export interface ZeroFeeTransferResult {
   authorizationId: string;
