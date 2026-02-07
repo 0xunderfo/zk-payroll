@@ -6,14 +6,14 @@
     </linearGradient>
   </defs>
 
-  <!-- Zero-shaped coin (ellipse) -->
-  <ellipse cx="24" cy="24" rx="16" ry="21" fill="url(#coinGrad)"/>
+  <!-- Round coin -->
+  <circle cx="24" cy="24" r="20" fill="url(#coinGrad)"/>
 
-  <!-- Inner cutout to make it a proper "0" -->
-  <ellipse cx="24" cy="24" rx="8" ry="12" fill="#0A0F0D"/>
+  <!-- Inner circle cutout for "0" effect -->
+  <circle cx="24" cy="24" r="10" fill="#0A0F0D"/>
 
-  <!-- Bandana mask across the zero -->
-  <path d="M6 17 L42 17 L42 26 L6 26 Z" fill="#003D29"/>
+  <!-- Bandana mask -->
+  <path d="M4 17 L44 17 L44 26 L4 26 Z" fill="#003D29"/>
 
   <!-- Eye slit - glowing visor -->
   <rect x="10" y="19.5" width="28" height="4" rx="1" fill="#00FFB2" opacity="0.9"/>

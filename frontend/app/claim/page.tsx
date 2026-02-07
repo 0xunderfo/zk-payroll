@@ -302,9 +302,9 @@ export default function ClaimPage() {
                     <stop offset="100%" stopColor="#00D395"/>
                   </linearGradient>
                 </defs>
-                <ellipse cx="24" cy="24" rx="16" ry="21" fill="url(#coinGradClaim)"/>
-                <ellipse cx="24" cy="24" rx="8" ry="12" fill="#0A0F0D"/>
-                <path d="M6 17 L42 17 L42 26 L6 26 Z" fill="#003D29"/>
+                <circle cx="24" cy="24" r="20" fill="url(#coinGradClaim)"/>
+                <circle cx="24" cy="24" r="10" fill="#0A0F0D"/>
+                <path d="M4 17 L44 17 L44 26 L4 26 Z" fill="#003D29"/>
                 <rect x="10" y="19.5" width="28" height="4" rx="1" fill="#00FFB2" opacity="0.9"/>
                 <circle cx="17" cy="21.5" r="1.5" fill="#003D29"/>
                 <circle cx="24" cy="21.5" r="1.5" fill="#003D29"/>
