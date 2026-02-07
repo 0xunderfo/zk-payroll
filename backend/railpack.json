@@ -4,6 +4,6 @@
     "node": "20"
   },
   "deploy": {
-    "startCommand": "npx tsx src/index.ts"
+    "startCommand": "node --max-old-space-size=1024 --import tsx src/index.ts"
   }
 }
