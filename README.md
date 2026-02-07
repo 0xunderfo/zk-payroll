@@ -39,35 +39,35 @@ This transparency creates real problems: salary negotiations become awkward when
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      FRONTEND (Next.js)                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │ Create Flow  │  │ Claim Flow   │  │ API Client           │  │
-│  │ - Recipients │  │ - Claim link │  │ - Backend calls      │  │
-│  │ - Amounts    │  │ - Zero-fee   │  │ - Proof requests     │  │
-│  │ - EIP-3009   │  │ - Direct     │  │ - Claim polling      │  │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+│                      FRONTEND (Next.js)                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
+│  │ Create Flow  │  │ Claim Flow   │  │ API Client           │   │
+│  │ - Recipients │  │ - Claim link │  │ - Backend calls      │   │
+│  │ - Amounts    │  │ - Zero-fee   │  │ - Proof requests     │   │
+│  │ - EIP-3009   │  │ - Direct     │  │ - Claim polling      │   │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      BACKEND (Hono)                              │
-│  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ /api/proof      │  │ /api/claim   │  │ /api/payroll     │  │
-│  │ - snarkjs       │  │ - verify     │  │ - escrow addr    │  │
-│  │ - Groth16       │  │ - zero-fee   │  │ - gasless create │  │
-│  │ - Poseidon      │  │ - status     │  │ - EIP-3009 relay │  │
-│  └──────────────────┘  └──────────────┘  └──────────────────┘  │
+│                      BACKEND (Hono)                             │
+│  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐   │
+│  │ /api/proof      │  │ /api/claim   │  │ /api/payroll     │    │
+│  │ - snarkjs       │  │ - verify     │  │ - escrow addr    │    │
+│  │ - Groth16       │  │ - zero-fee   │  │ - gasless create │    │
+│  │ - Poseidon      │  │ - status     │  │ - EIP-3009 relay │    │
+│  └──────────────────┘  └──────────────┘  └──────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    SMART CONTRACTS (Plasma)                      │
-│  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ ZKPayrollPrivate │  │ Groth16      │  │ PoseidonT4       │  │
-│  │ - createPayroll  │  │ Verifier     │  │ - On-chain hash  │  │
-│  │ - claimPayment   │  │ - BN254      │  │ - Commitment     │  │
-│  │ - markClaimed    │  │              │  │   verification   │  │
-│  └──────────────────┘  └──────────────┘  └──────────────────┘  │
+│                    SMART CONTRACTS (Plasma)                     │
+│  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐   │
+│  │ ZKPayrollPrivate │  │ Groth16      │  │ PoseidonT4       │   │
+│  │ - createPayroll  │  │ Verifier     │  │ - On-chain hash  │   │
+│  │ - claimPayment   │  │ - BN254      │  │ - Commitment     │   │
+│  │ - markClaimed    │  │              │  │   verification   │   │
+│  └──────────────────┘  └──────────────┘  └──────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -140,6 +140,8 @@ forge script script/DeployTestnet.s.sol --tc DeployTestnetScript \
 ```
 
 ## Demo
+
+Live frontend: 
 
 | Video | Description |
 |-------|-------------|
