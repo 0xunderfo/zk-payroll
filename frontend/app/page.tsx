@@ -9,12 +9,19 @@ export default function LandingPage() {
         <div className="max-w-[1080px] mx-auto w-full flex items-center justify-between">
           <Link href="/" className="font-display font-bold text-lg text-zk-text flex items-center gap-2 no-underline">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-              <circle cx="24" cy="24" r="20" fill="#00D395"/>
-              <path d="M4 15 L44 15 L44 25 L4 25 Z" fill="#003D29"/>
-              <rect x="12" y="18" width="24" height="4" fill="#00FFB2"/>
-              <circle cx="18" cy="20" r="1.5" fill="#003D29"/>
-              <circle cx="24" cy="20" r="1.5" fill="#003D29"/>
-              <circle cx="30" cy="20" r="1.5" fill="#003D29"/>
+              <defs>
+                <linearGradient id="coinGradNav" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#00FFB2"/>
+                  <stop offset="100%" stopColor="#00D395"/>
+                </linearGradient>
+              </defs>
+              <ellipse cx="24" cy="24" rx="16" ry="21" fill="url(#coinGradNav)"/>
+              <ellipse cx="24" cy="24" rx="8" ry="12" fill="#0A0F0D"/>
+              <path d="M6 17 L42 17 L42 26 L6 26 Z" fill="#003D29"/>
+              <rect x="10" y="19.5" width="28" height="4" rx="1" fill="#00FFB2" opacity="0.9"/>
+              <circle cx="17" cy="21.5" r="1.5" fill="#003D29"/>
+              <circle cx="24" cy="21.5" r="1.5" fill="#003D29"/>
+              <circle cx="31" cy="21.5" r="1.5" fill="#003D29"/>
             </svg>
             Private Payroll
           </Link>
