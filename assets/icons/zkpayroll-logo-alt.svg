@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+  <!-- Hexagonal coin (crypto style) -->
+  <polygon points="24,4 42,14 42,34 24,44 6,34 6,14" fill="#00D395"/>
+
+  <!-- Inner hexagon border -->
+  <polygon points="24,8 38,16 38,32 24,40 10,32 10,16" fill="none" stroke="#003D29" stroke-width="1.5"/>
+
+  <!-- Privacy mask - angular band -->
+  <polygon points="6,20 42,20 42,28 6,28" fill="#003D29"/>
+
+  <!-- Glowing eye slits -->
+  <rect x="12" y="22" width="7" height="4" fill="#00FFB2"/>
+  <rect x="29" y="22" width="7" height="4" fill="#00FFB2"/>
+
+  <!-- Subtle $ symbol below mask -->
+  <path d="M24 32 L24 36 M21 33 L27 33 Q28 33 28 34 Q28 35 24 35 Q20 35 20 36 Q20 37 21 37 L27 37" stroke="#00A676" stroke-width="1" fill="none"/>
+</svg>

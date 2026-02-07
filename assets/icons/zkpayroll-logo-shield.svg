@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+  <!-- Shield shape - sharp, confident -->
+  <path d="M24 4 L42 10 L42 26 Q42 38 24 44 Q6 38 6 26 L6 10 Z" fill="#00D395"/>
+
+  <!-- Inner shield border -->
+  <path d="M24 8 L38 13 L38 26 Q38 35 24 40 Q10 35 10 26 L10 13 Z" fill="none" stroke="#003D29" stroke-width="1.5"/>
+
+  <!-- Coin inside shield -->
+  <circle cx="24" cy="24" r="10" fill="#003D29"/>
+
+  <!-- Mask visor on coin -->
+  <rect x="16" y="22" width="16" height="4" fill="#00FFB2"/>
+
+  <!-- Hidden eye - single slit -->
+  <rect x="22" y="23" width="4" height="2" fill="#003D29"/>
+</svg>

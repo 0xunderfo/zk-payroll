@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZK Payroll — Private Stablecoin Payments</title>
+  <meta name="description" content="Pay your team in stablecoins while keeping individual salaries private. Zero-knowledge proofs on Plasma." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=General+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Foundation ── */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0a0a0b;
+      --bg-secondary: #111113;
+      --bg-elevated: #18181b;
+      --bg-inset: #0e0e10;
+
+      --text-primary: #ededef;
+      --text-secondary: #8b8b8e;
+      --text-tertiary: #5c5c5f;
+
+      --accent: #34d399;
+      --accent-dim: #059669;
+      --accent-glow: rgba(52, 211, 153, 0.12);
+      --accent-glow-strong: rgba(52, 211, 153, 0.25);
+
+      --border: rgba(255, 255, 255, 0.06);
+      --border-hover: rgba(255, 255, 255, 0.1);
+
+      --radius: 12px;
+
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03);
+      --shadow-lg: 0 16px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+
+      --font-display: 'JetBrains Mono', monospace;
+      --font-body: 'General Sans', -apple-system, sans-serif;
+
+      --text-hero: clamp(2.5rem, 6vw, 4.5rem);
+      --text-h1: clamp(1.75rem, 3.5vw, 2.75rem);
+      --text-h2: clamp(1.25rem, 2vw, 1.75rem);
+      --text-h3: clamp(1rem, 1.4vw, 1.25rem);
+      --text-body: 1rem;
+      --text-small: 0.875rem;
+      --text-micro: 0.75rem;
+
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-5: 1.5rem;
+      --space-6: 2rem;
+      --space-8: 3rem;
+      --space-10: 4rem;
+      --space-12: 6rem;
+      --space-16: 8rem;
+      --space-20: 10rem;
+
+      --width-default: 1080px;
+      --width-narrow: 720px;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: var(--text-body);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── Nav ── */
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      background: rgba(10, 10, 11, 0.7);
+      border-bottom: 1px solid var(--border);
+      height: 64px;
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-6);
+    }
+
+    .nav-inner {
+      max-width: var(--width-default);
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.125rem;
+      color: var(--text-primary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .nav-logo .shield {
+      width: 28px;
+      height: 28px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(52, 211, 153, 0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: var(--space-5);
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: var(--text-small);
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-primary);
+    }
+
+    .nav-links a.btn-launch {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 0.5rem 1.125rem;
+      font-size: var(--text-small);
+      font-weight: 600;
+      font-family: var(--font-body);
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--bg-primary);
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s var(--ease-out-expo), background 0.2s;
+      text-decoration: none;
+    }
+
+    .nav-links a.btn-launch:hover {
+      background: #5eead4;
+      color: var(--bg-primary);
+      transform: translateY(-1px);
+    }
+
+    .btn-launch:active {
+      transform: translateY(0);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: calc(64px + var(--space-20)) 0 var(--space-16);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 600px;
+      background: radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: var(--width-default);
+      margin: 0 auto;
+      padding: 0 var(--space-6);
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 0.375rem 1rem;
+      border-radius: 999px;
+      border: 1px solid rgba(52, 211, 153, 0.2);
+      background: rgba(52, 211, 153, 0.06);
+      color: var(--accent);
+      font-size: var(--text-micro);
+      font-weight: 600;
+      font-family: var(--font-display);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: var(--space-6);
+    }
+
+    .hero-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: var(--text-hero);
+      font-weight: 700;
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+      margin-bottom: var(--space-5);
+    }
+
+    .hero h1 .accent {
+      color: var(--accent);
+    }
+
+    .hero .subtitle {
+      font-size: var(--text-h3);
+      color: var(--text-secondary);
+      max-width: 52ch;
+      margin: 0 auto var(--space-8);
+      line-height: 1.7;
+    }
+
+    .hero-ctas {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 0.8125rem 1.75rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      font-family: var(--font-body);
+      border-radius: var(--radius);
+      background: var(--accent);
+      color: var(--bg-primary);
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s var(--ease-out-expo), background 0.2s, box-shadow 0.3s;
+      text-decoration: none;
+    }
+
+    .btn-primary:hover {
+      background: #5eead4;
+      transform: translateY(-1px);
+      box-shadow: 0 0 24px var(--accent-glow-strong), 0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 0.8125rem 1.75rem;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      font-family: var(--font-body);
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border-hover);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+      text-decoration: none;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-1px);
+    }
+
+    /* ── Flow Diagram ── */
+    .flow-section {
+      padding: var(--space-12) 0;
+      position: relative;
+    }
+
+    .flow-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-hover), transparent);
+    }
+
+    .section-inner {
+      max-width: var(--width-default);
+      margin: 0 auto;
+      padding: 0 var(--space-6);
+    }
+
+    .section-label {
+      font-family: var(--font-display);
+      font-size: var(--text-micro);
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      margin-bottom: var(--space-3);
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: var(--text-h1);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: var(--space-8);
+    }
+
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      position: relative;
+    }
+
+    .flow-step {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-5);
+      position: relative;
+      transition: border-color 0.3s var(--ease-out-expo), box-shadow 0.3s var(--ease-out-expo);
+    }
+
+    .flow-step:hover {
+      border-color: rgba(52, 211, 153, 0.15);
+      box-shadow: 0 0 30px rgba(52, 211, 153, 0.04);
+    }
+
+    .flow-step-num {
+      font-family: var(--font-display);
+      font-size: var(--text-micro);
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: var(--space-3);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .flow-step-num::before {
+      content: '';
+      width: 20px;
+      height: 1px;
+      background: var(--accent-dim);
+    }
+
+    .flow-step h3 {
+      font-family: var(--font-display);
+      font-size: var(--text-h3);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: var(--space-2);
+    }
+
+    .flow-step p {
+      color: var(--text-secondary);
+      font-size: var(--text-small);
+      line-height: 1.6;
+    }
+
+    .flow-connector {
+      position: absolute;
+      top: 50%;
+      right: calc(var(--space-4) * -1);
+      transform: translateX(50%) translateY(-50%);
+      color: var(--text-tertiary);
+      font-size: 0.875rem;
+      z-index: 2;
+      display: none;
+    }
+
+    /* ── Bento Features ── */
+    .features-section {
+      padding: var(--space-12) 0 var(--space-16);
+      position: relative;
+    }
+
+    .features-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-hover), transparent);
+    }
+
+    .features-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+      align-items: stretch;
+    }
+
+    .features-visual {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-6);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .features-visual .tx-mock {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .features-visual .tx-mock .tx-row {
+      flex: 1;
+    }
+
+    .features-visual-label {
+      font-family: var(--font-display);
+      font-size: var(--text-small);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: var(--space-2);
+    }
+
+    .features-visual-desc {
+      color: var(--text-secondary);
+      font-size: var(--text-small);
+      line-height: 1.65;
+      margin-bottom: var(--space-5);
+    }
+
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+
+    .tile {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-5);
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s var(--ease-out-expo), transform 0.3s var(--ease-out-expo);
+    }
+
+    .tile:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+
+    .tile-label {
+      font-family: var(--font-display);
+      font-size: var(--text-micro);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: var(--space-3);
+    }
+
+    .tile-label.green { color: var(--accent); }
+    .tile-label.blue { color: #60a5fa; }
+    .tile-label.amber { color: #fbbf24; }
+    .tile-label.rose { color: #fb7185; }
+
+    .tile h3 {
+      font-family: var(--font-display);
+      font-size: var(--text-h3);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: var(--space-2);
+    }
+
+    .tile p {
+      color: var(--text-secondary);
+      font-size: var(--text-small);
+      line-height: 1.65;
+    }
+
+    /* Hero tile: mock transaction view */
+    .tx-mock {
+      margin-top: var(--space-6);
+      background: var(--bg-inset);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .tx-mock-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tx-mock-header span {
+      font-family: var(--font-display);
+      font-size: var(--text-micro);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 500;
+    }
+
+    .tx-mock-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-family: var(--font-display);
+      font-size: 0.6875rem;
+      font-weight: 600;
+    }
+
+    .tx-mock-badge.verified {
+      background: rgba(52, 211, 153, 0.12);
+      color: var(--accent);
+    }
+
+    .tx-mock-badge.verified::before {
+      content: '✓';
+    }
+
+    .tx-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tx-row:last-child { border-bottom: none; }
+
+    .tx-row-label {
+      font-size: var(--text-small);
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .tx-row-value {
+      font-family: var(--font-display);
+      font-size: var(--text-small);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tx-row-value.public {
+      color: var(--text-primary);
+    }
+
+    .tx-row-value.hidden {
+      color: var(--text-tertiary);
+      letter-spacing: 0.15em;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .tx-row-value.hidden .lock-icon {
+      color: var(--accent-dim);
+      font-size: 0.75rem;
+    }
+
+    .tx-row.total-row {
+      background: rgba(52, 211, 153, 0.04);
+      border-top: 1px solid rgba(52, 211, 153, 0.1);
+      border-bottom: none;
+    }
+
+    .tx-row.total-row .tx-row-value {
+      color: var(--accent);
+    }
+
+    /* ── Tech Stack ── */
+    .stack-section {
+      padding: var(--space-12) 0;
+      position: relative;
+    }
+
+    .stack-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-hover), transparent);
+    }
+
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-4);
+    }
+
+    .stack-item {
+      text-align: center;
+      padding: var(--space-5);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: border-color 0.3s, transform 0.3s var(--ease-out-expo);
+    }
+
+    .stack-item:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+
+    .stack-item .stack-label {
+      font-family: var(--font-display);
+      font-size: var(--text-micro);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 500;
+      margin-bottom: var(--space-2);
+    }
+
+    .stack-item .stack-value {
+      font-family: var(--font-display);
+      font-size: var(--text-small);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* ── CTA Section ── */
+    .cta-section {
+      padding: var(--space-16) 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-hover), transparent);
+    }
+
+    .cta-glow {
+      position: absolute;
+      bottom: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 400px;
+      background: radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-content h2 {
+      font-family: var(--font-display);
+      font-size: var(--text-h1);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: var(--space-4);
+    }
+
+    .cta-content p {
+      color: var(--text-secondary);
+      font-size: var(--text-h3);
+      margin-bottom: var(--space-8);
+      max-width: 48ch;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.6;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: var(--space-8) var(--space-6);
+    }
+
+    .footer-inner {
+      max-width: var(--width-default);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-left {
+      font-size: var(--text-small);
+      color: var(--text-tertiary);
+    }
+
+    .footer-left strong {
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .footer-right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-5);
+    }
+
+    .footer-right a {
+      font-size: var(--text-small);
+      color: var(--text-tertiary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-right a:hover {
+      color: var(--text-primary);
+    }
+
+    /* ── Reveal Animations ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.7s var(--ease-out-expo), transform 0.7s var(--ease-out-expo);
+    }
+
+    .stagger-1 { transition-delay: 0ms !important; }
+    .stagger-2 { transition-delay: 60ms !important; }
+    .stagger-3 { transition-delay: 120ms !important; }
+    .stagger-4 { transition-delay: 180ms !important; }
+    .stagger-5 { transition-delay: 240ms !important; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .flow-grid { grid-template-columns: repeat(2, 1fr); }
+      .features-layout { grid-template-columns: 1fr; }
+      .benefits-grid { grid-template-columns: 1fr 1fr; }
+      .stack-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 600px) {
+      .flow-grid { grid-template-columns: 1fr; }
+      .benefits-grid { grid-template-columns: 1fr; }
+      .stack-grid { grid-template-columns: repeat(2, 1fr); }
+      .nav-links { gap: var(--space-3); }
+      .nav-links a:not(.btn-launch) { display: none; }
+      .hero-ctas { flex-direction: column; }
+      .footer-inner { flex-direction: column; gap: var(--space-4); text-align: center; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+      .reveal { opacity: 1; transform: none; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <circle cx="24" cy="24" r="20" fill="#00D395"/>
+          <path d="M4 15 L44 15 L44 25 L4 25 Z" fill="#003D29"/>
+          <rect x="12" y="18" width="24" height="4" fill="#00FFB2"/>
+          <circle cx="18" cy="20" r="1.5" fill="#003D29"/>
+          <circle cx="24" cy="20" r="1.5" fill="#003D29"/>
+          <circle cx="30" cy="20" r="1.5" fill="#003D29"/>
+        </svg>
+        ZK Payroll
+      </a>
+      <div class="nav-links">
+        <a href="#how-it-works">How It Works</a>
+        <a href="#features">Features</a>
+        <a href="#stack">Stack</a>
+        <a href="/frontend" class="btn-launch">Launch App &rarr;</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+      <div class="hero-badge reveal stagger-1">
+        Built at ETH Oxford 2026
+      </div>
+      <h1 class="reveal stagger-2">
+        Private payroll<br/>for <span class="accent">DAOs</span>
+      </h1>
+      <p class="subtitle reveal stagger-3">
+        Pay your team in stablecoins while keeping individual salaries private.
+        Zero-knowledge proofs verify the total — individual amounts never touch the chain.
+      </p>
+      <div class="hero-ctas reveal stagger-4">
+        <a href="/frontend" class="btn-primary">Launch App &rarr;</a>
+        <a href="https://github.com" class="btn-ghost">View on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="flow-section" id="how-it-works">
+    <div class="section-inner">
+      <p class="section-label reveal">How It Works</p>
+      <h2 class="section-title reveal">Four steps. Full privacy.</h2>
+      <div class="flow-grid">
+        <div class="flow-step reveal stagger-1">
+          <div class="flow-step-num">01</div>
+          <h3>Upload payroll</h3>
+          <p>Enter recipients and amounts via CSV or the form. Data never leaves your browser.</p>
+        </div>
+        <div class="flow-step reveal stagger-2">
+          <div class="flow-step-num">02</div>
+          <h3>Generate proof</h3>
+          <p>Groth16 proof generated client-side via snarkjs. Proves amounts sum to the declared total.</p>
+        </div>
+        <div class="flow-step reveal stagger-3">
+          <div class="flow-step-num">03</div>
+          <h3>Deposit &amp; commit</h3>
+          <p>USDT deposited to escrow. Poseidon hash commitments lock each recipient&rsquo;s payment amount.</p>
+        </div>
+        <div class="flow-step reveal stagger-4">
+          <div class="flow-step-num">04</div>
+          <h3>Recipients claim</h3>
+          <p>Each recipient claims with their secret salt. The contract verifies the commitment and releases funds.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Bento -->
+  <section class="features-section" id="features">
+    <div class="section-inner">
+      <p class="section-label reveal">Why ZK Payroll</p>
+      <h2 class="section-title reveal">Your on-chain payroll<br/>is leaking data today</h2>
+
+      <div class="features-layout">
+        <!-- Left: transaction mock -->
+        <div class="features-visual reveal stagger-1">
+          <p class="features-visual-label">What anyone can see on a block explorer</p>
+          <p class="features-visual-desc">
+            Individual salaries are replaced with Poseidon commitments.
+            The total is publicly verifiable — the breakdown is not.
+          </p>
+          <div class="tx-mock">
+            <div class="tx-mock-header">
+              <span>Payroll #1 &middot; 3 recipients</span>
+              <span class="tx-mock-badge verified">ZK Verified</span>
+            </div>
+            <div class="tx-row">
+              <span class="tx-row-label">alice.eth</span>
+              <span class="tx-row-value hidden">
+                <span class="lock-icon">&#x1f512;</span> &#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022; USDT
+              </span>
+            </div>
+            <div class="tx-row">
+              <span class="tx-row-label">bob.eth</span>
+              <span class="tx-row-value hidden">
+                <span class="lock-icon">&#x1f512;</span> &#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022; USDT
+              </span>
+            </div>
+            <div class="tx-row">
+              <span class="tx-row-label">carol.eth</span>
+              <span class="tx-row-value hidden">
+                <span class="lock-icon">&#x1f512;</span> &#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022; USDT
+              </span>
+            </div>
+            <div class="tx-row total-row">
+              <span class="tx-row-label">Verified total</span>
+              <span class="tx-row-value public">15,000.00 USDT</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: 2x2 benefit cards -->
+        <div class="benefits-grid">
+          <div class="tile reveal stagger-2">
+            <div class="tile-label green">Privacy</div>
+            <h3>Salaries stay secret</h3>
+            <p>
+              Individual amounts are private inputs to the ZK circuit.
+              Only the total hits the chain — no one can reverse-engineer who earns what.
+            </p>
+          </div>
+
+          <div class="tile reveal stagger-3">
+            <div class="tile-label blue">Cost</div>
+            <h3>Zero gas fees</h3>
+            <p>
+              Plasma provides free USDT transfers.
+              Running payroll shouldn&rsquo;t eat into your treasury.
+            </p>
+          </div>
+
+          <div class="tile reveal stagger-4">
+            <div class="tile-label amber">UX</div>
+            <h3>CSV in, payroll out</h3>
+            <p>
+              Drop a spreadsheet with addresses and amounts.
+              One click generates the proof and queues the deposit.
+            </p>
+          </div>
+
+          <div class="tile reveal stagger-5">
+            <div class="tile-label rose">Distribution</div>
+            <h3>Recipients self-serve</h3>
+            <p>
+              Funds sit in escrow until claimed with a unique link.
+              No coordination overhead for the employer.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech Stack -->
+  <section class="stack-section" id="stack">
+    <div class="section-inner">
+      <p class="section-label reveal">Stack</p>
+      <h2 class="section-title reveal">Built with conviction</h2>
+      <div class="stack-grid">
+        <div class="stack-item reveal stagger-1">
+          <div class="stack-label">Chain</div>
+          <div class="stack-value">Plasma</div>
+        </div>
+        <div class="stack-item reveal stagger-2">
+          <div class="stack-label">Circuits</div>
+          <div class="stack-value">Circom + Groth16</div>
+        </div>
+        <div class="stack-item reveal stagger-3">
+          <div class="stack-label">Contracts</div>
+          <div class="stack-value">Solidity + Foundry</div>
+        </div>
+        <div class="stack-item reveal stagger-4">
+          <div class="stack-label">Frontend</div>
+          <div class="stack-value">Next.js + wagmi</div>
+        </div>
+        <div class="stack-item reveal stagger-5">
+          <div class="stack-label">Hash</div>
+          <div class="stack-value">Poseidon T4</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-glow"></div>
+    <div class="section-inner cta-content">
+      <h2 class="reveal">Your team&rsquo;s salaries are<br/>nobody&rsquo;s business</h2>
+      <p class="reveal stagger-2">
+        Stop exposing compensation data on-chain.
+        Start running private payroll in minutes.
+      </p>
+      <div class="reveal stagger-3">
+        <a href="/frontend" class="btn-primary">Launch App &rarr;</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <strong>ZK Payroll</strong> &middot; ETH Oxford 2026
+      </div>
+      <div class="footer-right">
+        <a href="#">Programmable Cryptography Track</a>
+        <a href="#">Plasma Bounty</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,24 @@
+node_modules/
+out/
+.next/
+build/
+*.ptau
+cache/
+circuits/build/
+contracts/out/
+contracts/cache/
+frontend/.next/
+frontend/node_modules/
+.env
+.env.local
+
+# OS
+.DS_Store
+
+# Build artifacts
+contracts/broadcast/
+frontend/.turbo/
+.vercel/
+
+# Backend
+backend/node_modules/

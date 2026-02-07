@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+  <!-- Coin base -->
+  <circle cx="24" cy="24" r="20" fill="#00D395"/>
+
+  <!-- Inner ring -->
+  <circle cx="24" cy="24" r="16" fill="none" stroke="#00A676" stroke-width="1.5"/>
+
+  <!-- Mask/Visor - horizontal band across coin representing anonymity -->
+  <rect x="8" y="19" width="32" height="10" fill="#003D29"/>
+
+  <!-- Eye slots in mask - representing "zero knowledge" (hidden but verified) -->
+  <rect x="12" y="22" width="6" height="4" fill="#00D395"/>
+  <rect x="30" y="22" width="6" height="4" fill="#00D395"/>
+
+  <!-- ZK text - clean monospace style -->
+  <!-- Z: top bar, diagonal, bottom bar -->
+  <path d="M19 22 L22 22 L19 26 L22 26" stroke="#00FFB2" stroke-width="1.25" stroke-linecap="square" fill="none"/>
+  <!-- K: vertical stem + two diagonals -->
+  <path d="M26 22 L26 26 M28 22 L26 24 L28 26" stroke="#00FFB2" stroke-width="1.25" stroke-linecap="square" fill="none"/>
+</svg>

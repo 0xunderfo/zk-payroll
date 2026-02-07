@@ -1,0 +1,34 @@
+{
+  "name": "zk-payroll",
+  "version": "0.1.0",
+  "description": "Private stablecoin payroll using zero-knowledge proofs on Plasma",
+  "private": true,
+  "workspaces": [
+    "circuits",
+    "frontend"
+  ],
+  "scripts": {
+    "circuit:compile": "cd circuits && bun run compile",
+    "circuit:setup": "cd circuits && bun run setup",
+    "circuit:test": "cd circuits && bun run test",
+    "contracts:build": "cd contracts && forge build",
+    "contracts:test": "cd contracts && forge test -vvv",
+    "contracts:deploy": "cd contracts && forge script script/Deploy.s.sol --broadcast",
+    "frontend:dev": "cd frontend && bun dev",
+    "frontend:build": "cd frontend && bun run build",
+    "clean": "rm -rf circuits/build contracts/out frontend/.next"
+  },
+  "keywords": [
+    "zk",
+    "zero-knowledge",
+    "payroll",
+    "privacy",
+    "plasma",
+    "stablecoin"
+  ],
+  "author": "ETH Oxford 2026 Team",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "zk-payroll-circuits",
+  "version": "0.1.0",
+  "description": "Circom circuits for ZK Payroll",
+  "private": true,
+  "scripts": {
+    "compile": "circom payroll.circom --r1cs --wasm --sym -o build/",
+    "setup": "bun run scripts/setup.js",
+    "prove": "bun run scripts/prove.js",
+    "verify": "bun run scripts/verify.js",
+    "export-verifier": "snarkjs zkey export solidityverifier build/circuit_final.zkey ../contracts/src/Verifier.sol",
+    "test": "bun run scripts/test.js"
+  },
+  "dependencies": {
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
+    "snarkjs": "^0.7.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}
