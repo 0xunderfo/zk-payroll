@@ -1,15 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "cd frontend && bun run build",
+  "outputDirectory": "frontend/.next",
+  "installCommand": "cd frontend && bun install",
   "git": {
     "deploymentEnabled": {
       "main": true
     }
-  },
-  "redirects": [
-    {
-      "source": "/frontend/:path*",
-      "destination": "/create/:path*",
-      "permanent": true
-    }
-  ]
+  }
 }
