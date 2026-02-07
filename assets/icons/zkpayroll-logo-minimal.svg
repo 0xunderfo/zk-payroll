@@ -13,13 +13,13 @@
   <circle cx="24" cy="24" r="10" fill="#0A0F0D"/>
 
   <!-- Bandana mask -->
-  <path d="M4 17 L44 17 L44 26 L4 26 Z" fill="#003D29"/>
+  <path d="M4 14 L44 14 L44 30 L4 30 Z" fill="#003D29"/>
 
   <!-- Eye slit - glowing visor -->
-  <rect x="10" y="19.5" width="28" height="4" rx="1" fill="#00FFB2" opacity="0.9"/>
+  <rect x="10" y="19" width="28" height="6" rx="1" fill="#00FFB2" opacity="0.9"/>
 
   <!-- Privacy dots inside visor -->
-  <circle cx="17" cy="21.5" r="1.5" fill="#003D29"/>
-  <circle cx="24" cy="21.5" r="1.5" fill="#003D29"/>
-  <circle cx="31" cy="21.5" r="1.5" fill="#003D29"/>
+  <circle cx="17" cy="22" r="2" fill="#003D29"/>
+  <circle cx="24" cy="22" r="2" fill="#003D29"/>
+  <circle cx="31" cy="22" r="2" fill="#003D29"/>
 </svg>
