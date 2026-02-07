@@ -55,7 +55,7 @@ export const config = getDefaultConfig({
 // These will be set when you run `forge script Deploy.s.sol`
 export const contracts = {
   zkPayroll: {
-    [plasmaTestnet.id]: "0x20968f24Ce6A04fa90C7DF771d7FD3821372c68c" as `0x${string}`,
+    [plasmaTestnet.id]: "0xeE2130Fa435801EB4536eEBCBc9DAF75f2B02051" as `0x${string}`,
     [localhost.id]: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318" as `0x${string}`,
   },
   usdt: {

@@ -1,0 +1,26 @@
+# Use Node.js (snarkjs web-worker crashes with Bun)
+# v2: Switched from Bun to Node for snarkjs compatibility
+FROM node:20-slim AS base
+WORKDIR /app
+
+# Install dependencies
+FROM base AS deps
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Production
+FROM base AS runner
+ENV NODE_ENV=production
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY src ./src
+COPY circuits ./circuits
+COPY package.json ./
+
+# Install tsx for running TypeScript directly
+RUN npm install -g tsx
+
+EXPOSE 3001
+ENV PORT=3001
+
+CMD ["tsx", "src/index.ts"]
