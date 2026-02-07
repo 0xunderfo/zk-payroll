@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
+  "redirects": [
+    {
+      "source": "/frontend/:path*",
+      "destination": "/create/:path*",
+      "permanent": true
+    }
+  ]
+}

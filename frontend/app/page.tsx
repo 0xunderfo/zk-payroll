@@ -1,327 +1,218 @@
-"use client";
+import Link from "next/link";
 
-import { useState } from "react";
-import { useAccount, useWriteContract, useChainId } from "wagmi";
-import { parseUnits } from "viem";
-import { PayrollForm } from "../components/PayrollForm";
-import { ProofStatus } from "../components/ProofStatus";
-import { WalletButton } from "../components/WalletButton";
-import { ClaimCredentials } from "../components/ClaimCredentials";
-import { generatePrivatePayrollProof, type PrivatePayrollProof, type ClaimCredential } from "../lib/proof";
-import { zkPayrollPrivateAbi, erc20Abi } from "../lib/abi";
-import { contracts } from "../lib/wagmi";
-
-const USDT_DECIMALS = 6;
-const MAX_RECIPIENTS = 5;
-const ZERO_ADDR = "0x0000000000000000000000000000000000000000" as `0x${string}`;
-
-export default function Home() {
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-  const [payrollData, setPayrollData] = useState<{
-    recipients: string[];
-    amounts: string[];
-    total: string;
-  } | null>(null);
-  const [proofStatus, setProofStatus] = useState<
-    "idle" | "generating" | "ready" | "submitting" | "complete" | "error"
-  >("idle");
-  const [proofData, setProofData] = useState<PrivatePayrollProof | null>(null);
-  const [txHash, setTxHash] = useState<string | null>(null);
-  const [payrollId, setPayrollId] = useState<number | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const { writeContractAsync } = useWriteContract();
-
-  const zkPayrollAddress = contracts.zkPayroll[chainId as keyof typeof contracts.zkPayroll] || contracts.zkPayroll[31337];
-  const usdtAddress = contracts.usdt[chainId as keyof typeof contracts.usdt] || contracts.usdt[31337];
-
-  const explorerUrl = chainId === 9746 ? "https://testnet.plasmascan.to" : null;
-
-  const handleGenerateProof = async () => {
-    if (!payrollData) return;
-    setProofStatus("generating");
-    setErrorMsg(null);
-
-    try {
-      const rawAmounts = payrollData.amounts.map((a) =>
-        parseUnits(a, USDT_DECIMALS).toString()
-      );
-      const rawTotal = parseUnits(payrollData.total, USDT_DECIMALS).toString();
-
-      const proof = await generatePrivatePayrollProof(
-        payrollData.recipients,
-        rawAmounts,
-        rawTotal
-      );
-
-      setProofData(proof);
-      setProofStatus("ready");
-    } catch (e: any) {
-      console.error("Proof generation error:", e);
-      setErrorMsg(e?.message || "Proof generation failed");
-      setProofStatus("error");
-    }
-  };
-
-  const handleSubmitPayroll = async () => {
-    if (!payrollData || !proofData || !address) return;
-    setProofStatus("submitting");
-    setErrorMsg(null);
-
-    try {
-      const rawTotal = parseUnits(payrollData.total, USDT_DECIMALS);
-
-      // Pad recipients and commitments to 5
-      const paddedRecipients: `0x${string}`[] = payrollData.recipients.map(
-        (r) => r as `0x${string}`
-      );
-      while (paddedRecipients.length < MAX_RECIPIENTS) {
-        paddedRecipients.push(ZERO_ADDR);
-      }
-
-      const commitmentsBigInt = proofData.commitments.map((c) => BigInt(c));
-
-      // Step 1: Approve USDT
-      console.log("Approving USDT spend...");
-      await writeContractAsync({
-        address: usdtAddress as `0x${string}`,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [zkPayrollAddress as `0x${string}`, rawTotal],
-      });
-
-      // Step 2: Create payroll
-      console.log("Creating payroll...");
-      const executeTx = await writeContractAsync({
-        address: zkPayrollAddress as `0x${string}`,
-        abi: zkPayrollPrivateAbi,
-        functionName: "createPayroll",
-        args: [
-          proofData.proof as any,
-          rawTotal,
-          BigInt(payrollData.recipients.length),
-          commitmentsBigInt as any,
-          paddedRecipients as any,
-        ],
-      });
-
-      setTxHash(executeTx);
-      // For now assume payrollId 0 for first payroll; in production read from events
-      setPayrollId(0);
-      setProofStatus("complete");
-    } catch (e: any) {
-      console.error("Transaction error:", e);
-      setErrorMsg(e?.shortMessage || e?.message || "Transaction failed");
-      setProofStatus("ready");
-    }
-  };
-
-  const handleReset = () => {
-    setPayrollData(null);
-    setProofStatus("idle");
-    setProofData(null);
-    setTxHash(null);
-    setPayrollId(null);
-    setErrorMsg(null);
-  };
-
+export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
-      {/* Header */}
-      <header className="border-b border-gray-800 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">ZK Payroll</h1>
-            <p className="text-gray-400 text-sm">
-              Private stablecoin payments with Poseidon commitments
-            </p>
+    <main className="min-h-screen bg-zk-bg text-zk-text">
+      {/* Nav */}
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-zk-bg/70 border-b border-white/[0.06] h-16 flex items-center px-6">
+        <div className="max-w-[1080px] mx-auto w-full flex items-center justify-between">
+          <Link href="/" className="font-display font-bold text-lg text-zk-text flex items-center gap-2 no-underline">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <circle cx="24" cy="24" r="20" fill="#00D395"/>
+              <path d="M4 15 L44 15 L44 25 L4 25 Z" fill="#003D29"/>
+              <rect x="12" y="18" width="24" height="4" fill="#00FFB2"/>
+              <circle cx="18" cy="20" r="1.5" fill="#003D29"/>
+              <circle cx="24" cy="20" r="1.5" fill="#003D29"/>
+              <circle cx="30" cy="20" r="1.5" fill="#003D29"/>
+            </svg>
+            ZK Payroll
+          </Link>
+          <div className="flex items-center gap-6">
+            <Link href="#how-it-works" className="text-zk-muted hover:text-zk-text text-sm font-medium transition-colors hidden sm:block">
+              How It Works
+            </Link>
+            <Link href="#features" className="text-zk-muted hover:text-zk-text text-sm font-medium transition-colors hidden sm:block">
+              Features
+            </Link>
+            <Link href="#stack" className="text-zk-muted hover:text-zk-text text-sm font-medium transition-colors hidden sm:block">
+              Stack
+            </Link>
+            <Link
+              href="/create"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-zk-accent text-zk-bg hover:bg-zk-accent-hover transition-all hover:-translate-y-px"
+            >
+              Launch App &rarr;
+            </Link>
           </div>
-          <WalletButton />
         </div>
-      </header>
+      </nav>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        {!isConnected ? (
-          <div className="text-center py-20">
-            <h2 className="text-3xl font-bold mb-4">
-              Private Payroll for DAOs
-            </h2>
-            <p className="text-gray-400 mb-8 max-w-md mx-auto">
-              Pay your team in stablecoins while keeping individual salaries
-              private. Amounts are hidden behind Poseidon hash commitments -
-              only the total is visible on-chain.
-            </p>
-            <div className="inline-block p-8 rounded-2xl bg-gray-800/50 border border-gray-700">
-              <p className="text-gray-300 mb-4">Connect your wallet to start</p>
-              <WalletButton />
+      {/* Hero */}
+      <section className="pt-[calc(64px+10rem)] pb-16 text-center relative overflow-hidden">
+        <div className="absolute top-[-200px] left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[radial-gradient(ellipse_at_center,_rgba(52,211,153,0.12)_0%,_transparent_70%)] pointer-events-none" />
+        <div className="relative z-10 max-w-[1080px] mx-auto px-6">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-zk-accent/20 bg-zk-accent/5 text-zk-accent text-xs font-display font-semibold uppercase tracking-wider mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-zk-accent animate-pulse" />
+            Built at ETH Oxford 2026
+          </div>
+          <h1 className="font-display text-[clamp(2.5rem,6vw,4.5rem)] font-bold leading-[1.08] tracking-tight mb-5">
+            Private payroll<br/>for <span className="text-zk-accent">DAOs</span>
+          </h1>
+          <p className="text-zk-muted text-[clamp(1rem,1.4vw,1.25rem)] max-w-[52ch] mx-auto mb-8 leading-relaxed">
+            Pay your team in stablecoins while keeping individual salaries private.
+            Zero-knowledge proofs verify the total — individual amounts never touch the chain.
+          </p>
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <Link
+              href="/create"
+              className="inline-flex items-center gap-2 px-7 py-3 text-[0.9375rem] font-semibold rounded-xl bg-zk-accent text-zk-bg hover:bg-zk-accent-hover transition-all hover:-translate-y-px hover:shadow-[0_0_24px_rgba(52,211,153,0.25)]"
+            >
+              Launch App &rarr;
+            </Link>
+            <a
+              href="https://github.com/0xunderfo/zk-payroll"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-7 py-3 text-[0.9375rem] font-medium rounded-xl bg-transparent text-zk-text border border-white/10 hover:bg-white/[0.04] hover:border-white/15 transition-all hover:-translate-y-px"
+            >
+              View on GitHub
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section id="how-it-works" className="py-12 relative">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div className="max-w-[1080px] mx-auto px-6">
+          <p className="font-display text-xs text-zk-accent uppercase tracking-wider font-semibold mb-3">How It Works</p>
+          <h2 className="font-display text-[clamp(1.75rem,3.5vw,2.75rem)] font-bold tracking-tight leading-tight mb-8">
+            Four steps. Full privacy.
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { num: "01", title: "Upload payroll", desc: "Enter recipients and amounts via CSV or the form. Data never leaves your browser." },
+              { num: "02", title: "Generate proof", desc: "Groth16 proof generated client-side via snarkjs. Proves amounts sum to the declared total." },
+              { num: "03", title: "Deposit & commit", desc: "USDT deposited to escrow. Poseidon hash commitments lock each recipient's payment amount." },
+              { num: "04", title: "Recipients claim", desc: "Each recipient claims with their secret salt. The contract verifies the commitment and releases funds." },
+            ].map((step, i) => (
+              <div key={i} className="bg-zk-surface border border-white/[0.06] rounded-xl p-5 hover:border-zk-accent/15 hover:shadow-[0_0_30px_rgba(52,211,153,0.04)] transition-all">
+                <div className="font-display text-xs font-bold text-zk-accent mb-3 flex items-center gap-2">
+                  <span className="w-5 h-px bg-zk-accent/50" />
+                  {step.num}
+                </div>
+                <h3 className="font-display text-[clamp(1rem,1.4vw,1.25rem)] font-semibold tracking-tight mb-2">{step.title}</h3>
+                <p className="text-zk-muted text-sm leading-relaxed">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features" className="py-12 relative">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div className="max-w-[1080px] mx-auto px-6">
+          <p className="font-display text-xs text-zk-accent uppercase tracking-wider font-semibold mb-3">Why ZK Payroll</p>
+          <h2 className="font-display text-[clamp(1.75rem,3.5vw,2.75rem)] font-bold tracking-tight leading-tight mb-8">
+            Your on-chain payroll<br/>is leaking data today
+          </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Transaction Mock */}
+            <div className="bg-zk-surface border border-white/[0.06] rounded-xl p-6">
+              <p className="font-display text-sm font-semibold mb-2">What anyone can see on a block explorer</p>
+              <p className="text-zk-muted text-sm leading-relaxed mb-5">
+                Individual salaries are replaced with Poseidon commitments.
+                The total is publicly verifiable — the breakdown is not.
+              </p>
+              <div className="bg-zk-inset border border-white/[0.06] rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+                  <span className="font-display text-xs text-zk-dim uppercase tracking-wider">Payroll #1 &middot; 3 recipients</span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zk-accent/10 text-zk-accent text-xs font-display font-semibold">
+                    ✓ ZK Verified
+                  </span>
+                </div>
+                {["alice.eth", "bob.eth", "carol.eth"].map((name, i) => (
+                  <div key={i} className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+                    <span className="text-zk-muted text-sm font-medium">{name}</span>
+                    <span className="text-zk-dim text-sm font-display flex items-center gap-2">
+                      <span className="text-xs">🔒</span>
+                      •••••• USDT
+                    </span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between px-4 py-3 bg-zk-accent/5 border-t border-zk-accent/10">
+                  <span className="text-zk-muted text-sm font-medium">Verified total</span>
+                  <span className="text-zk-accent text-sm font-display font-semibold tabular-nums">15,000.00 USDT</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Benefits Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                { label: "Privacy", color: "text-zk-accent", title: "Salaries stay secret", desc: "Individual amounts are private inputs to the ZK circuit. Only the total hits the chain." },
+                { label: "Cost", color: "text-blue-400", title: "Zero gas fees", desc: "Plasma provides free USDT transfers. Running payroll shouldn't eat into your treasury." },
+                { label: "UX", color: "text-amber-400", title: "CSV in, payroll out", desc: "Drop a spreadsheet with addresses and amounts. One click generates the proof." },
+                { label: "Distribution", color: "text-rose-400", title: "Recipients self-serve", desc: "Funds sit in escrow until claimed with a unique link. No coordination overhead." },
+              ].map((item, i) => (
+                <div key={i} className="bg-zk-surface border border-white/[0.06] rounded-xl p-5 hover:border-white/10 hover:-translate-y-0.5 transition-all">
+                  <div className={`font-display text-xs font-semibold uppercase tracking-wider mb-3 ${item.color}`}>{item.label}</div>
+                  <h3 className="font-display text-[clamp(1rem,1.4vw,1.25rem)] font-semibold tracking-tight mb-2">{item.title}</h3>
+                  <p className="text-zk-muted text-sm leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
             </div>
           </div>
-        ) : (
-          <div className="space-y-8">
-            {/* Step 1: Upload Payroll */}
-            <section className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold">
-                  1
-                </div>
-                <h2 className="text-xl font-semibold">Upload Payroll</h2>
+        </div>
+      </section>
+
+      {/* Tech Stack */}
+      <section id="stack" className="py-12 relative">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div className="max-w-[1080px] mx-auto px-6">
+          <p className="font-display text-xs text-zk-accent uppercase tracking-wider font-semibold mb-3">Stack</p>
+          <h2 className="font-display text-[clamp(1.75rem,3.5vw,2.75rem)] font-bold tracking-tight leading-tight mb-8">
+            Built with conviction
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[
+              { label: "Chain", value: "Plasma" },
+              { label: "Circuits", value: "Circom + Groth16" },
+              { label: "Contracts", value: "Solidity + Foundry" },
+              { label: "Frontend", value: "Next.js + wagmi" },
+              { label: "Hash", value: "Poseidon T4" },
+            ].map((item, i) => (
+              <div key={i} className="text-center p-5 bg-zk-surface border border-white/[0.06] rounded-xl hover:border-white/10 hover:-translate-y-0.5 transition-all">
+                <div className="font-display text-xs text-zk-dim uppercase tracking-wider font-medium mb-2">{item.label}</div>
+                <div className="font-display text-sm font-semibold text-zk-text">{item.value}</div>
               </div>
-              <PayrollForm
-                onPayrollReady={(data) => {
-                  setPayrollData(data);
-                  setProofStatus("idle");
-                  setProofData(null);
-                  setTxHash(null);
-                  setPayrollId(null);
-                  setErrorMsg(null);
-                }}
-              />
-            </section>
-
-            {/* Step 2: Generate ZK Proof */}
-            {payrollData && (
-              <section className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-                    2
-                  </div>
-                  <h2 className="text-xl font-semibold">Generate ZK Proof</h2>
-                </div>
-                <ProofStatus
-                  status={proofStatus}
-                  payrollData={payrollData}
-                  commitments={proofData?.commitments}
-                  onGenerateProof={handleGenerateProof}
-                />
-              </section>
-            )}
-
-            {/* Step 3: Deposit & Create */}
-            {proofStatus === "ready" && (
-              <section className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-bold">
-                    3
-                  </div>
-                  <h2 className="text-xl font-semibold">Deposit & Create Payroll</h2>
-                </div>
-                <div className="space-y-4">
-                  <div className="bg-gray-900/50 rounded-xl p-4">
-                    <p className="text-gray-400 text-sm mb-2">Summary</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-gray-500 text-xs">Total Deposit</p>
-                        <p className="text-2xl font-bold">{payrollData?.total} USDT</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500 text-xs">Recipients</p>
-                        <p className="text-2xl font-bold">{payrollData?.recipients.length}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                    <span>Amounts hidden via Poseidon commitments - only total visible on-chain</span>
-                  </div>
-                  {errorMsg && (
-                    <div className="bg-red-900/20 border border-red-800 rounded-lg p-3 text-red-400 text-sm">
-                      {errorMsg}
-                    </div>
-                  )}
-                  <button
-                    onClick={handleSubmitPayroll}
-                    className="w-full py-3 px-6 bg-green-600 hover:bg-green-500 rounded-xl font-semibold transition-colors"
-                  >
-                    Approve USDT & Create Payroll
-                  </button>
-                </div>
-              </section>
-            )}
-
-            {/* Submitting state */}
-            {proofStatus === "submitting" && (
-              <section className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
-                <div className="text-center py-6">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-green-500 border-t-transparent mb-4"></div>
-                  <p className="text-gray-300">Submitting transactions...</p>
-                  <p className="text-gray-500 text-sm mt-1">Please confirm in your wallet</p>
-                </div>
-              </section>
-            )}
-
-            {/* Step 4: Share Credentials */}
-            {proofStatus === "complete" && proofData && (
-              <>
-                <section className="bg-green-900/20 rounded-2xl p-6 border border-green-800">
-                  <div className="text-center">
-                    <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 mx-auto mb-4">
-                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <h3 className="text-xl font-bold text-green-400 mb-2">
-                      Payroll Created!
-                    </h3>
-                    <p className="text-gray-400">
-                      {payrollData?.recipients.length} payments deposited in escrow
-                    </p>
-                    {txHash && (
-                      <p className="text-gray-500 text-sm mt-2 font-mono">
-                        {explorerUrl ? (
-                          <a
-                            href={`${explorerUrl}/tx/${txHash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 hover:underline"
-                          >
-                            tx: {txHash.slice(0, 10)}...{txHash.slice(-8)}
-                          </a>
-                        ) : (
-                          <>tx: {txHash.slice(0, 10)}...{txHash.slice(-8)}</>
-                        )}
-                      </p>
-                    )}
-                  </div>
-                </section>
-
-                <section className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold">
-                      4
-                    </div>
-                    <h2 className="text-xl font-semibold">Share Claim Links</h2>
-                  </div>
-                  <ClaimCredentials
-                    credentials={proofData.claimCredentials}
-                    payrollId={payrollId ?? 0}
-                  />
-                </section>
-
-                <div className="text-center">
-                  <button
-                    onClick={handleReset}
-                    className="py-3 px-6 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition-colors"
-                  >
-                    New Payroll
-                  </button>
-                </div>
-              </>
-            )}
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-16 text-center relative">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div className="absolute bottom-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[radial-gradient(ellipse_at_center,_rgba(52,211,153,0.12)_0%,_transparent_70%)] pointer-events-none" />
+        <div className="relative z-10 max-w-[1080px] mx-auto px-6">
+          <h2 className="font-display text-[clamp(1.75rem,3.5vw,2.75rem)] font-bold tracking-tight mb-4">
+            Your team&apos;s salaries are<br/>nobody&apos;s business
+          </h2>
+          <p className="text-zk-muted text-[clamp(1rem,1.4vw,1.25rem)] max-w-[48ch] mx-auto mb-8 leading-relaxed">
+            Stop exposing compensation data on-chain.
+            Start running private payroll in minutes.
+          </p>
+          <Link
+            href="/create"
+            className="inline-flex items-center gap-2 px-7 py-3 text-[0.9375rem] font-semibold rounded-xl bg-zk-accent text-zk-bg hover:bg-zk-accent-hover transition-all hover:-translate-y-px hover:shadow-[0_0_24px_rgba(52,211,153,0.25)]"
+          >
+            Launch App &rarr;
+          </Link>
+        </div>
+      </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800 px-6 py-8 mt-12">
-        <div className="max-w-4xl mx-auto text-center text-gray-500 text-sm">
-          <p>Built at ETH Oxford 2026</p>
-          <p className="mt-1">
-            Powered by Plasma * Zero-fee USDT transfers * Poseidon ZK privacy
-          </p>
+      <footer className="border-t border-white/[0.06] px-6 py-8">
+        <div className="max-w-[1080px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
+          <div className="text-zk-dim">
+            <span className="text-zk-muted font-semibold">ZK Payroll</span> &middot; ETH Oxford 2026
+          </div>
+          <div className="flex items-center gap-5 text-zk-dim">
+            <span>Programmable Cryptography Track</span>
+            <span>Plasma Bounty</span>
+          </div>
         </div>
       </footer>
     </main>
