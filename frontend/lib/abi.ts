@@ -145,9 +145,10 @@ export const USDT0_EIP712_DOMAIN = {
   verifyingContract: "0x502012b361AebCE43b26Ec812B74D9a51dB4D412" as `0x${string}`, // USDT0
 } as const;
 
-// EIP-3009 ReceiveWithAuthorization types for gasless transfers
-export const RECEIVE_WITH_AUTHORIZATION_TYPES = {
-  ReceiveWithAuthorization: [
+// EIP-3009 TransferWithAuthorization types for gasless transfers
+// Note: transferWithAuthorization allows anyone to submit, unlike receiveWithAuthorization
+export const TRANSFER_WITH_AUTHORIZATION_TYPES = {
+  TransferWithAuthorization: [
     { name: "from", type: "address" },
     { name: "to", type: "address" },
     { name: "value", type: "uint256" },

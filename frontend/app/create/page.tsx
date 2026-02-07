@@ -20,7 +20,7 @@ import {
   zkPayrollPrivateAbi,
   erc20Abi,
   USDT0_EIP712_DOMAIN,
-  RECEIVE_WITH_AUTHORIZATION_TYPES,
+  TRANSFER_WITH_AUTHORIZATION_TYPES,
   type EIP3009Authorization
 } from "../../lib/abi";
 import { contracts, plasmaTestnet } from "../../lib/wagmi";
@@ -124,8 +124,8 @@ export default function CreatePayroll() {
       // Step 3: Sign EIP-712 typed data (gasless!)
       const signature = await walletClient.signTypedData({
         domain: USDT0_EIP712_DOMAIN,
-        types: RECEIVE_WITH_AUTHORIZATION_TYPES,
-        primaryType: "ReceiveWithAuthorization",
+        types: TRANSFER_WITH_AUTHORIZATION_TYPES,
+        primaryType: "TransferWithAuthorization",
         message: authorization,
       });
       console.log("Signature obtained:", signature.slice(0, 20) + "...");
