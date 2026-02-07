@@ -19,8 +19,15 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ZK Payroll",
-  description: "Private stablecoin payroll using zero-knowledge proofs",
+  title: "Private Payroll",
+  description: "Confidential stablecoin payroll using zero-knowledge proofs on Plasma",
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({

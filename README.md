@@ -1,12 +1,16 @@
-# ZK Payroll
+<p align="center">
+  <img src="assets/icons/zkpayroll-logo-minimal.svg" alt="Private Payroll" width="80" height="80" />
+</p>
 
-Private stablecoin payroll using zero-knowledge proofs on Plasma.
+# Private Payroll
+
+Confidential stablecoin payroll using zero-knowledge proofs on Plasma.
 
 > Built at ETH Oxford 2026 | Programmable Cryptography Track + Plasma Bounty
 
 ## Overview
 
-ZK Payroll enables organizations to pay their team in stablecoins (USDT) while keeping individual payment amounts private. Only the total payroll amount is visible on-chain — individual salaries are hidden behind Poseidon hash commitments and verified with Groth16 proofs.
+Private Payroll enables organizations to pay their team in stablecoins (USDT) while keeping individual payment amounts private. Only the total payroll amount is visible on-chain — individual salaries are hidden behind Poseidon hash commitments and verified with Groth16 proofs.
 
 ## Problem
 
@@ -90,8 +94,8 @@ This transparency creates real problems: salary negotiations become awkward when
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/user/zk-payroll.git
-cd zk-payroll
+git clone https://github.com/0xunderfo/private-payroll.git
+cd private-payroll
 bun install
 cd frontend && bun install && cd ..
 cd backend && bun install && cd ..

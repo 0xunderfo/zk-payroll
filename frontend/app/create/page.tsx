@@ -272,7 +272,7 @@ export default function CreatePayroll() {
               <circle cx="24" cy="20" r="1.5" fill="#003D29"/>
               <circle cx="30" cy="20" r="1.5" fill="#003D29"/>
             </svg>
-            <span className="font-display font-bold text-lg text-zk-text">ZK Payroll</span>
+            <span className="font-display font-bold text-lg text-zk-text">Private Payroll</span>
           </a>
           <WalletButton />
         </div>
@@ -539,12 +539,10 @@ export default function CreatePayroll() {
       <footer className="border-t border-white/[0.06] px-6 py-8 mt-12">
         <div className="max-w-4xl mx-auto flex items-center justify-between text-sm">
           <div className="text-zk-dim">
-            <span className="text-zk-muted font-semibold">ZK Payroll</span> &middot; ETH Oxford 2026
+            <span className="text-zk-muted font-semibold">Private Payroll</span> &middot; ETH Oxford 2026
           </div>
-          <div className="flex items-center gap-4 text-zk-dim">
-            <span>Plasma</span>
-            <span>&middot;</span>
-            <span>Poseidon ZK Privacy</span>
+          <div className="text-zk-dim">
+            Programmable Cryptography &middot; Powered by Plasma
           </div>
         </div>
       </footer>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AnimatedCustomers } from "@/components/AnimatedCustomers";
 
 export default function LandingPage() {
   return (
@@ -15,7 +16,7 @@ export default function LandingPage() {
               <circle cx="24" cy="20" r="1.5" fill="#003D29"/>
               <circle cx="30" cy="20" r="1.5" fill="#003D29"/>
             </svg>
-            ZK Payroll
+            Private Payroll
           </Link>
           <div className="flex items-center gap-6">
             <Link href="#how-it-works" className="text-zk-muted hover:text-zk-text text-sm font-medium transition-colors hidden sm:block">
@@ -43,15 +44,16 @@ export default function LandingPage() {
         <div className="relative z-10 max-w-[1080px] mx-auto px-6">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-zk-accent/20 bg-zk-accent/5 text-zk-accent text-xs font-display font-semibold uppercase tracking-wider mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-zk-accent animate-pulse" />
-            Built at ETH Oxford 2026
+            Powered by SNARKs &middot; Live on Plasma
           </div>
           <h1 className="font-display text-[clamp(2.5rem,6vw,4.5rem)] font-bold leading-[1.08] tracking-tight mb-5">
-            Private payroll<br/>for <span className="text-zk-accent">DAOs</span>
+            Zero fees.<br/><span className="text-zk-accent">Zero exposure.</span>
           </h1>
-          <p className="text-zk-muted text-[clamp(1rem,1.4vw,1.25rem)] max-w-[52ch] mx-auto mb-8 leading-relaxed">
-            Pay your team in stablecoins while keeping individual salaries private.
-            Zero-knowledge proofs verify the total — individual amounts never touch the chain.
+          <p className="text-zk-muted text-[clamp(1rem,1.4vw,1.25rem)] max-w-[52ch] mx-auto mb-6 leading-relaxed">
+            Confidential stablecoin payroll with zero-fee USDT0 transfers.
+            ZK proofs verify the sum — individual amounts never touch the chain.
           </p>
+          <AnimatedCustomers />
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <Link
               href="/create"
@@ -60,7 +62,7 @@ export default function LandingPage() {
               Launch App &rarr;
             </Link>
             <a
-              href="https://github.com/user/zk-payroll"
+              href="https://github.com/0xunderfo/private-payroll"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-7 py-3 text-[0.9375rem] font-medium rounded-xl bg-transparent text-zk-text border border-white/10 hover:bg-white/[0.04] hover:border-white/15 transition-all hover:-translate-y-px"
@@ -77,7 +79,7 @@ export default function LandingPage() {
         <div className="max-w-[1080px] mx-auto px-6">
           <p className="font-display text-xs text-zk-accent uppercase tracking-wider font-semibold mb-3">How It Works</p>
           <h2 className="font-display text-[clamp(1.75rem,3.5vw,2.75rem)] font-bold tracking-tight leading-tight mb-8">
-            Four steps. Full privacy.
+            Prove without revealing.
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
@@ -103,7 +105,7 @@ export default function LandingPage() {
       <section id="features" className="py-12 relative">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         <div className="max-w-[1080px] mx-auto px-6">
-          <p className="font-display text-xs text-zk-accent uppercase tracking-wider font-semibold mb-3">Why ZK Payroll</p>
+          <p className="font-display text-xs text-zk-accent uppercase tracking-wider font-semibold mb-3">Why Private Payroll</p>
           <h2 className="font-display text-[clamp(1.75rem,3.5vw,2.75rem)] font-bold tracking-tight leading-tight mb-8">
             Your on-chain payroll<br/>is leaking data today
           </h2>
@@ -188,10 +190,10 @@ export default function LandingPage() {
         <div className="absolute bottom-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[radial-gradient(ellipse_at_center,_rgba(52,211,153,0.12)_0%,_transparent_70%)] pointer-events-none" />
         <div className="relative z-10 max-w-[1080px] mx-auto px-6">
           <h2 className="font-display text-[clamp(1.75rem,3.5vw,2.75rem)] font-bold tracking-tight mb-4">
-            Your team&apos;s salaries are<br/>nobody&apos;s business
+            Trustless payroll.<br/>Full privacy.
           </h2>
           <p className="text-zk-muted text-[clamp(1rem,1.4vw,1.25rem)] max-w-[48ch] mx-auto mb-8 leading-relaxed">
-            Stop exposing compensation data on-chain.
+            Zero-fee stablecoin payments on Plasma.
             Start running private payroll in minutes.
           </p>
           <Link
@@ -207,11 +209,21 @@ export default function LandingPage() {
       <footer className="border-t border-white/[0.06] px-6 py-8">
         <div className="max-w-[1080px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
           <div className="text-zk-dim">
-            <span className="text-zk-muted font-semibold">ZK Payroll</span> &middot; ETH Oxford 2026
+            <span className="text-zk-muted font-semibold">Private Payroll</span> &middot; ETH Oxford 2026
           </div>
-          <div className="flex items-center gap-5 text-zk-dim">
-            <span>Programmable Cryptography Track</span>
-            <span>Plasma Bounty</span>
+          <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zk-surface border border-white/[0.06] text-xs font-medium text-zk-muted">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              ETH Oxford '26
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zk-surface border border-white/[0.06] text-xs font-medium text-zk-muted">
+              <span className="w-1.5 h-1.5 rounded-full bg-zk-accent" />
+              Live on Plasma
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zk-surface border border-white/[0.06] text-xs font-medium text-zk-muted">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+              Groth16 zkSNARKs
+            </span>
           </div>
         </div>
       </footer>

@@ -303,7 +303,7 @@ export default function ClaimPage() {
                 <circle cx="24" cy="20" r="1.5" fill="#003D29"/>
                 <circle cx="30" cy="20" r="1.5" fill="#003D29"/>
               </svg>
-              ZK Payroll
+              Private Payroll
             </a>
             <p className="text-zk-dim text-xs font-display mt-0.5">Claim your payment</p>
           </div>
@@ -323,10 +323,10 @@ export default function ClaimPage() {
       <footer className="border-t border-white/[0.06] px-6 py-8 mt-12">
         <div className="max-w-2xl mx-auto flex items-center justify-between text-sm">
           <div className="text-zk-dim">
-            <span className="text-zk-muted font-semibold">ZK Payroll</span> &middot; ETH Oxford 2026
+            <span className="text-zk-muted font-semibold">Private Payroll</span> &middot; ETH Oxford 2026
           </div>
           <div className="text-zk-dim">
-            Plasma &middot; Poseidon ZK Privacy
+            Programmable Cryptography &middot; Powered by Plasma
           </div>
         </div>
       </footer>
