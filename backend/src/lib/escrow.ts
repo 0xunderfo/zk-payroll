@@ -100,7 +100,7 @@ export async function signAuthorization(
     from: account.address,
     to,
     value,
-    validAfter,
+    validAfter: validAfter === 0n ? now - 60n : validAfter, // Use recent timestamp if 0
     validBefore: validBefore ?? now + 3600n, // 1 hour default
     nonce: nonce ?? generateNonce(),
   };
