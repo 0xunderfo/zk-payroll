@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAccount, useWriteContract, useChainId } from "wagmi";
@@ -8,6 +8,11 @@ import { WalletButton } from "../../components/WalletButton";
 import { ClaimForm } from "../../components/ClaimForm";
 import { zkPayrollPrivateAbi } from "../../lib/abi";
 import { contracts } from "../../lib/wagmi";
+import {
+  checkBackendHealth,
+  submitZeroFeeClaim,
+  waitForClaimConfirmation,
+} from "../../lib/api";
 
 function ClaimContent() {
   const { address, isConnected } = useAccount();
@@ -19,6 +24,9 @@ function ClaimContent() {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [claimedAmount, setClaimedAmount] = useState<string | null>(null);
+  const [claimMode, setClaimMode] = useState<"zero-fee" | "direct">("zero-fee");
+  const [backendAvailable, setBackendAvailable] = useState<boolean | null>(null);
+  const [claimProgress, setClaimProgress] = useState<string | null>(null);
 
   const zkPayrollAddress = contracts.zkPayroll[chainId as keyof typeof contracts.zkPayroll] || contracts.zkPayroll[31337];
   const explorerUrl = chainId === 9746 ? "https://testnet.plasmascan.to" : null;
@@ -32,7 +40,60 @@ function ClaimContent() {
 
   const hasUrlParams = initialData.payrollId && initialData.amount && initialData.salt;
 
-  const handleClaim = async (data: {
+  // Check backend availability on mount
+  useEffect(() => {
+    checkBackendHealth().then((available) => {
+      setBackendAvailable(available);
+      if (!available) {
+        setClaimMode("direct");
+      }
+    });
+  }, []);
+
+  const handleZeroFeeClaim = async (data: {
+    payrollId: bigint;
+    commitmentIndex: bigint;
+    amount: bigint;
+    salt: bigint;
+  }) => {
+    if (!address) return;
+    setStatus("claiming");
+    setErrorMsg(null);
+    setClaimProgress("Submitting zero-fee claim...");
+
+    try {
+      // Submit to backend
+      const result = await submitZeroFeeClaim(
+        data.payrollId.toString(),
+        data.commitmentIndex.toString(),
+        address,
+        data.amount.toString(),
+        data.salt.toString()
+      );
+
+      setClaimProgress("Waiting for confirmation...");
+
+      // Wait for confirmation
+      const finalStatus = await waitForClaimConfirmation(result.claimId);
+
+      if (finalStatus.status === "confirmed") {
+        setTxHash(finalStatus.txHash || null);
+        setClaimedAmount((Number(data.amount) / 1e6).toFixed(2));
+        setStatus("success");
+      } else {
+        throw new Error(finalStatus.error || "Claim failed");
+      }
+    } catch (e: any) {
+      console.error("Zero-fee claim error:", e);
+      const msg = e?.message || "Claim failed";
+      setErrorMsg(msg);
+      setStatus("error");
+    } finally {
+      setClaimProgress(null);
+    }
+  };
+
+  const handleDirectClaim = async (data: {
     payrollId: bigint;
     commitmentIndex: bigint;
     amount: bigint;
@@ -54,10 +115,23 @@ function ClaimContent() {
       setClaimedAmount((Number(data.amount) / 1e6).toFixed(2));
       setStatus("success");
     } catch (e: any) {
-      console.error("Claim error:", e);
+      console.error("Direct claim error:", e);
       const msg = e?.shortMessage || e?.message || "Claim failed";
       setErrorMsg(msg);
       setStatus("error");
+    }
+  };
+
+  const handleClaim = async (data: {
+    payrollId: bigint;
+    commitmentIndex: bigint;
+    amount: bigint;
+    salt: bigint;
+  }) => {
+    if (claimMode === "zero-fee" && backendAvailable) {
+      await handleZeroFeeClaim(data);
+    } else {
+      await handleDirectClaim(data);
     }
   };
 
@@ -122,6 +196,51 @@ function ClaimContent() {
             </div>
           )}
 
+          {/* Claim Mode Toggle */}
+          <div className="bg-gray-800/30 rounded-xl p-4 border border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-gray-400 text-sm">Claim Method</span>
+              {backendAvailable === null && (
+                <span className="text-gray-500 text-xs">Checking...</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => backendAvailable && setClaimMode("zero-fee")}
+                disabled={!backendAvailable}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                  claimMode === "zero-fee" && backendAvailable
+                    ? "bg-green-600 text-white"
+                    : backendAvailable
+                    ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    : "bg-gray-800 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                Zero-Fee (Gasless)
+              </button>
+              <button
+                onClick={() => setClaimMode("direct")}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                  claimMode === "direct"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                }`}
+              >
+                Direct (Pay Gas)
+              </button>
+            </div>
+            <p className="text-gray-500 text-xs mt-2">
+              {claimMode === "zero-fee"
+                ? "Claim via Plasma relayer - no gas fees required!"
+                : "Claim directly on-chain - you pay the gas fee."}
+            </p>
+            {!backendAvailable && backendAvailable !== null && (
+              <p className="text-yellow-500 text-xs mt-1">
+                Zero-fee backend unavailable. Using direct claim.
+              </p>
+            )}
+          </div>
+
           <section className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-bold">
@@ -138,6 +257,13 @@ function ClaimContent() {
             {errorMsg && (
               <div className="bg-red-900/20 border border-red-800 rounded-lg p-3 text-red-400 text-sm mb-4">
                 {errorMsg}
+              </div>
+            )}
+
+            {claimProgress && (
+              <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-3 text-blue-400 text-sm mb-4 flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-400 border-t-transparent"></div>
+                {claimProgress}
               </div>
             )}
 
