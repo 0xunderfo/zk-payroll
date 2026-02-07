@@ -29,7 +29,7 @@ export function ClaimCredentials({ credentials, payrollId }: ClaimCredentialsPro
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-400 text-sm">
+      <p className="text-zk-muted text-sm">
         Share these claim links with each recipient. They will need to connect
         the matching wallet to claim their payment.
       </p>
@@ -39,32 +39,32 @@ export function ClaimCredentials({ credentials, payrollId }: ClaimCredentialsPro
         return (
           <div
             key={i}
-            className="bg-gray-900/50 rounded-xl p-4 border border-gray-700"
+            className="bg-zk-inset rounded-xl p-4 border border-white/[0.06]"
           >
             <div className="flex justify-between items-start mb-3">
               <div>
-                <p className="text-gray-500 text-xs">Recipient {i + 1}</p>
-                <p className="text-white font-mono text-sm">
+                <p className="text-zk-dim text-xs uppercase tracking-wider font-display">Recipient {i + 1}</p>
+                <p className="text-zk-text font-display text-sm mt-0.5">
                   {cred.recipient.slice(0, 6)}...{cred.recipient.slice(-4)}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-gray-500 text-xs">Amount</p>
-                <p className="text-white font-medium">
+                <p className="text-zk-dim text-xs uppercase tracking-wider font-display">Amount</p>
+                <p className="text-zk-text font-medium font-display tabular-nums mt-0.5">
                   {(Number(cred.amount) / 1e6).toFixed(2)} USDT
                 </p>
               </div>
             </div>
 
-            <div className="bg-gray-800 rounded-lg p-3">
-              <p className="text-gray-500 text-xs mb-1">Claim Link</p>
+            <div className="bg-zk-bg rounded-lg p-3 border border-white/[0.04]">
+              <p className="text-zk-dim text-xs font-display mb-1">Claim Link</p>
               <div className="flex items-center gap-2">
-                <code className="text-xs text-gray-300 break-all flex-1">
+                <code className="text-xs text-zk-muted break-all flex-1 font-display">
                   {claimUrl}
                 </code>
                 <button
                   onClick={() => copyToClipboard(claimUrl, i)}
-                  className="shrink-0 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-medium transition-colors"
+                  className="shrink-0 px-3 py-1.5 bg-zk-accent hover:bg-zk-accent-hover text-zk-bg rounded-lg text-xs font-semibold transition-all"
                 >
                   {copiedIndex === i ? "Copied!" : "Copy"}
                 </button>

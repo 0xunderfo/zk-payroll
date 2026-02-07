@@ -139,34 +139,34 @@ function ClaimContent() {
     <div className="max-w-2xl mx-auto px-6 py-12">
       {!isConnected ? (
         <div className="text-center py-20">
-          <h2 className="text-3xl font-bold mb-4">Claim Your Payment</h2>
-          <p className="text-gray-400 mb-8 max-w-md mx-auto">
+          <h2 className="font-display text-3xl font-bold tracking-tight mb-4">Claim Your Payment</h2>
+          <p className="text-zk-muted mb-8 max-w-md mx-auto">
             Connect the wallet that was registered in the payroll to claim your payment.
           </p>
-          <div className="inline-block p-8 rounded-2xl bg-gray-800/50 border border-gray-700">
-            <p className="text-gray-300 mb-4">Connect your wallet to claim</p>
+          <div className="inline-block p-8 rounded-2xl bg-zk-card border border-white/[0.06]">
+            <p className="text-zk-muted mb-4 text-sm">Connect your wallet to claim</p>
             <WalletButton />
           </div>
         </div>
       ) : status === "success" ? (
         <div className="text-center py-12">
-          <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 mx-auto mb-6">
+          <div className="w-20 h-20 rounded-full bg-zk-accent/10 flex items-center justify-center text-zk-accent mx-auto mb-6">
             <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-2xl font-bold text-green-400 mb-2">Payment Claimed!</h3>
-          <p className="text-gray-400 text-lg mb-4">
-            You received <span className="text-white font-bold">{claimedAmount} USDT</span>
+          <h3 className="text-2xl font-bold font-display text-zk-accent mb-2">Payment Claimed</h3>
+          <p className="text-zk-muted text-lg mb-4">
+            You received <span className="text-zk-text font-bold font-display tabular-nums">{claimedAmount} USDT</span>
           </p>
           {txHash && (
-            <p className="text-gray-500 text-sm font-mono">
+            <p className="text-zk-dim text-sm font-display">
               {explorerUrl ? (
                 <a
                   href={`${explorerUrl}/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
+                  className="text-zk-accent hover:text-zk-accent-hover transition-colors"
                 >
                   tx: {txHash.slice(0, 10)}...{txHash.slice(-8)}
                 </a>
@@ -181,88 +181,88 @@ function ClaimContent() {
               setTxHash(null);
               setClaimedAmount(null);
             }}
-            className="mt-6 py-2 px-6 bg-gray-700 hover:bg-gray-600 rounded-xl font-medium transition-colors"
+            className="mt-6 py-2.5 px-6 bg-zk-card hover:bg-zk-surface border border-white/[0.06] hover:border-white/[0.1] rounded-xl font-medium text-sm transition-all text-zk-muted hover:text-zk-text"
           >
             Claim Another
           </button>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {hasUrlParams && (
-            <div className="bg-blue-900/20 border border-blue-800/50 rounded-xl p-4">
-              <p className="text-blue-300 text-sm">
-                Claim credentials loaded from link. Verify the details below and click "Claim Payment".
+            <div className="bg-zk-accent/5 border border-zk-accent/10 rounded-xl p-4">
+              <p className="text-zk-accent text-sm">
+                Claim credentials loaded from link. Verify the details below and click &ldquo;Claim Payment&rdquo;.
               </p>
             </div>
           )}
 
           {/* Claim Mode Toggle */}
-          <div className="bg-gray-800/30 rounded-xl p-4 border border-gray-700">
+          <div className="bg-zk-surface rounded-xl p-4 border border-white/[0.06]">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-gray-400 text-sm">Claim Method</span>
+              <span className="text-zk-dim text-xs uppercase tracking-wider font-display">Claim Method</span>
               {backendAvailable === null && (
-                <span className="text-gray-500 text-xs">Checking...</span>
+                <span className="text-zk-dim text-xs">Checking...</span>
               )}
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => backendAvailable && setClaimMode("zero-fee")}
                 disabled={!backendAvailable}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
                   claimMode === "zero-fee" && backendAvailable
-                    ? "bg-green-600 text-white"
+                    ? "bg-zk-accent text-zk-bg"
                     : backendAvailable
-                    ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                    : "bg-gray-800 text-gray-500 cursor-not-allowed"
+                    ? "bg-zk-card text-zk-muted hover:text-zk-text border border-white/[0.06]"
+                    : "bg-zk-inset text-zk-dim cursor-not-allowed border border-white/[0.04]"
                 }`}
               >
                 Zero-Fee (Gasless)
               </button>
               <button
                 onClick={() => setClaimMode("direct")}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
                   claimMode === "direct"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    ? "bg-zk-accent text-zk-bg"
+                    : "bg-zk-card text-zk-muted hover:text-zk-text border border-white/[0.06]"
                 }`}
               >
                 Direct (Pay Gas)
               </button>
             </div>
-            <p className="text-gray-500 text-xs mt-2">
+            <p className="text-zk-dim text-xs mt-2">
               {claimMode === "zero-fee"
-                ? "Claim via Plasma relayer - no gas fees required!"
-                : "Claim directly on-chain - you pay the gas fee."}
+                ? "Claim via Plasma relayer — no gas fees required"
+                : "Claim directly on-chain — you pay the gas fee"}
             </p>
             {!backendAvailable && backendAvailable !== null && (
-              <p className="text-yellow-500 text-xs mt-1">
+              <p className="text-amber-400 text-xs mt-1">
                 Zero-fee backend unavailable. Using direct claim.
               </p>
             )}
           </div>
 
-          <section className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-bold">
+          <section className="bg-zk-card rounded-2xl p-6 border border-white/[0.06]">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-8 h-8 rounded-full bg-zk-accent/10 flex items-center justify-center text-zk-accent font-display font-bold text-sm">
                 $
               </div>
-              <h2 className="text-xl font-semibold">Claim Payment</h2>
+              <h2 className="font-display text-lg font-semibold tracking-tight">Claim Payment</h2>
             </div>
 
-            <div className="bg-gray-900/50 rounded-xl p-4 mb-4">
-              <p className="text-gray-500 text-xs mb-1">Your Wallet</p>
-              <p className="text-white font-mono">{address}</p>
+            <div className="bg-zk-inset rounded-xl p-4 mb-4 border border-white/[0.04]">
+              <p className="text-zk-dim text-xs uppercase tracking-wider font-display mb-1">Your Wallet</p>
+              <p className="text-zk-text font-display text-sm">{address}</p>
             </div>
 
             {errorMsg && (
-              <div className="bg-red-900/20 border border-red-800 rounded-lg p-3 text-red-400 text-sm mb-4">
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-400 text-sm mb-4">
                 {errorMsg}
               </div>
             )}
 
             {claimProgress && (
-              <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-3 text-blue-400 text-sm mb-4 flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-400 border-t-transparent"></div>
+              <div className="bg-zk-accent/5 border border-zk-accent/10 rounded-lg p-3 text-zk-accent text-sm mb-4 flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-zk-accent border-t-transparent"></div>
                 {claimProgress}
               </div>
             )}
@@ -274,9 +274,9 @@ function ClaimContent() {
             />
           </section>
 
-          <div className="bg-gray-800/30 rounded-xl p-4 text-sm text-gray-500">
-            <p className="font-medium text-gray-400 mb-2">How claiming works:</p>
-            <ul className="space-y-1">
+          <div className="bg-zk-surface rounded-xl p-4 text-sm text-zk-dim border border-white/[0.06]">
+            <p className="font-medium text-zk-muted mb-2 font-display text-xs uppercase tracking-wider">How claiming works</p>
+            <ul className="space-y-1 text-zk-muted">
               <li>1. Your wallet address must match the one registered in the payroll</li>
               <li>2. The contract verifies Poseidon(your_address, amount, salt) matches the stored commitment</li>
               <li>3. On success, USDT is transferred directly to your wallet</li>
@@ -290,14 +290,22 @@ function ClaimContent() {
 
 export default function ClaimPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
-      <header className="border-b border-gray-800 px-6 py-4">
-        <div className="max-w-2xl mx-auto flex justify-between items-center">
+    <main className="min-h-screen bg-zk-bg text-zk-text">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-zk-bg/70 border-b border-white/[0.06]">
+        <div className="max-w-2xl mx-auto flex justify-between items-center px-6 h-16">
           <div>
-            <a href="/" className="text-2xl font-bold hover:text-gray-300 transition-colors">
+            <a href="/" className="font-display font-bold text-lg text-zk-text hover:text-zk-muted transition-colors no-underline flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                <circle cx="24" cy="24" r="20" fill="#00D395"/>
+                <path d="M4 15 L44 15 L44 25 L4 25 Z" fill="#003D29"/>
+                <rect x="12" y="18" width="24" height="4" fill="#00FFB2"/>
+                <circle cx="18" cy="20" r="1.5" fill="#003D29"/>
+                <circle cx="24" cy="20" r="1.5" fill="#003D29"/>
+                <circle cx="30" cy="20" r="1.5" fill="#003D29"/>
+              </svg>
               ZK Payroll
             </a>
-            <p className="text-gray-400 text-sm">Claim your payment</p>
+            <p className="text-zk-dim text-xs font-display mt-0.5">Claim your payment</p>
           </div>
           <WalletButton />
         </div>
@@ -305,17 +313,21 @@ export default function ClaimPage() {
 
       <Suspense fallback={
         <div className="max-w-2xl mx-auto px-6 py-12 text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-500 border-t-transparent"></div>
-          <p className="text-gray-400 mt-4">Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-zk-accent border-t-transparent"></div>
+          <p className="text-zk-muted mt-4 text-sm">Loading...</p>
         </div>
       }>
         <ClaimContent />
       </Suspense>
 
-      <footer className="border-t border-gray-800 px-6 py-8 mt-12">
-        <div className="max-w-2xl mx-auto text-center text-gray-500 text-sm">
-          <p>Built at ETH Oxford 2026</p>
-          <p className="mt-1">Powered by Plasma * Poseidon ZK privacy</p>
+      <footer className="border-t border-white/[0.06] px-6 py-8 mt-12">
+        <div className="max-w-2xl mx-auto flex items-center justify-between text-sm">
+          <div className="text-zk-dim">
+            <span className="text-zk-muted font-semibold">ZK Payroll</span> &middot; ETH Oxford 2026
+          </div>
+          <div className="text-zk-dim">
+            Plasma &middot; Poseidon ZK Privacy
+          </div>
         </div>
       </footer>
     </main>
