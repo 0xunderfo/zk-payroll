@@ -141,7 +141,7 @@ forge script script/DeployTestnet.s.sol --tc DeployTestnetScript \
 
 ## Demo
 
-Live frontend: https://private-payroll.vercel.app
+Live frontend: https://pvt-payroll.vercel.app
 
 | Video | Description |
 |-------|-------------|
