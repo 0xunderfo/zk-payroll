@@ -4,13 +4,15 @@
       <stop offset="0%" stop-color="#00FFB2"/>
       <stop offset="100%" stop-color="#00D395"/>
     </linearGradient>
+    <!-- Mask to cut out the inner circle -->
+    <mask id="donutMask">
+      <rect width="48" height="48" fill="white"/>
+      <circle cx="24" cy="24" r="10" fill="black"/>
+    </mask>
   </defs>
 
-  <!-- Round coin -->
-  <circle cx="24" cy="24" r="20" fill="url(#coinGrad)"/>
-
-  <!-- Inner circle cutout for "0" effect -->
-  <circle cx="24" cy="24" r="10" fill="#0A0F0D"/>
+  <!-- Round coin with transparent center -->
+  <circle cx="24" cy="24" r="20" fill="url(#coinGrad)" mask="url(#donutMask)"/>
 
   <!-- Bandana mask -->
   <path d="M4 16 L44 16 L44 28 L4 28 Z" fill="#003D29"/>
