@@ -47,7 +47,7 @@ export const localhost = defineChain({
 export const config = getDefaultConfig({
   appName: "Private Payroll",
   projectId: "YOUR_WALLETCONNECT_PROJECT_ID", // Get from cloud.walletconnect.com
-  chains: [localhost, plasmaTestnet],
+  chains: [plasmaTestnet, localhost],
   ssr: true,
 });
 
