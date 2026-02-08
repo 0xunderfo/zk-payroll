@@ -1,7 +1,7 @@
 {
-  "name": "zk-payroll-frontend",
+  "name": "private-payroll-frontend",
   "version": "0.1.0",
-  "description": "Frontend for ZK Payroll",
+  "description": "Frontend for Private Payroll",
   "private": true,
   "scripts": {
     "dev": "next dev",

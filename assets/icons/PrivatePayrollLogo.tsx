@@ -4,9 +4,8 @@ interface LogoProps {
   className?: string;
 }
 
-export const ZKPayrollLogo = ({ size = 48, variant = 'default', className }: LogoProps) => {
+export const PrivatePayrollLogo = ({ size = 48, variant = 'default', className }: LogoProps) => {
   const logos = {
-    // Masked coin with ZK text hints
     default: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -91,7 +90,7 @@ export const ZKPayrollLogo = ({ size = 48, variant = 'default', className }: Log
 };
 
 // Color exports for consistency across the app
-export const zkPayrollColors = {
+export const privatePayrollColors = {
   primary: '#00D395',      // Crypto green
   primaryDark: '#00A676',  // Darker green
   accent: '#00FFB2',       // Bright green glow

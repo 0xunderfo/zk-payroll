@@ -28,7 +28,7 @@ function ClaimContent() {
   const [backendAvailable, setBackendAvailable] = useState<boolean | null>(null);
   const [claimProgress, setClaimProgress] = useState<string | null>(null);
 
-  const zkPayrollAddress = contracts.zkPayroll[chainId as keyof typeof contracts.zkPayroll] || contracts.zkPayroll[31337];
+  const payrollAddress = contracts.privatePayroll[chainId as keyof typeof contracts.privatePayroll] || contracts.privatePayroll[31337];
   const explorerUrl = chainId === 9746 ? "https://testnet.plasmascan.to" : null;
 
   const initialData = {
@@ -105,7 +105,7 @@ function ClaimContent() {
 
     try {
       const tx = await writeContractAsync({
-        address: zkPayrollAddress as `0x${string}`,
+        address: payrollAddress as `0x${string}`,
         abi: zkPayrollPrivateAbi,
         functionName: "claimPayment",
         args: [data.payrollId, data.commitmentIndex, data.amount, data.salt],

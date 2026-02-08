@@ -1,5 +1,5 @@
 /*
- * ZK Payroll - Private Payroll Circuit (v2.1)
+ * Private Payroll - Circuit (v2.1)
  *
  * Proves:
  *   1. sum(amounts) == totalAmount

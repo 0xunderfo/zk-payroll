@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ZK Payroll is a privacy-preserving stablecoin payroll system built for DAOs. It allows employers to pay teams while keeping individual salaries private using zero-knowledge proofs. Only the total payroll amount is visible on-chain; individual amounts are hidden behind Poseidon hash commitments.
+Private Payroll is a privacy-preserving stablecoin payroll system built for DAOs. It allows employers to pay teams while keeping individual salaries private using zero-knowledge proofs. Only the total payroll amount is visible on-chain; individual amounts are hidden behind Poseidon hash commitments.
 
 **Target Chain:** Plasma (testnet chain ID: 9746) with zero-fee USDT transfers via EIP-3009 relayer.
 
@@ -41,7 +41,7 @@ cd contracts && forge test --match-test testFunctionName -vvv
    - Circuit artifacts go to `frontend/public/circuits/` after setup
 
 2. **Contracts** (`contracts/`) - Foundry-based Solidity
-   - `ZKPayrollPrivate.sol`: Main contract with two-phase model (employer creates, recipients claim)
+   - `PrivatePayroll.sol`: Main contract with two-phase model (employer creates, recipients claim)
    - `Verifier.sol`: Auto-generated Groth16 verifier from snarkjs
    - `PoseidonT4.sol`: Poseidon hash interface (deployed from bytecode)
    - Uses escrow pattern: funds held in EOA, contract has transferFrom approval
@@ -82,11 +82,13 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=...
 
 # backend/.env
 ESCROW_PRIVATE_KEY=...
-ZK_PAYROLL_ADDRESS=...
+PRIVATE_PAYROLL_ADDRESS=...
 PLASMA_RPC=https://testnet-rpc.plasma.to
 ```
 
 ## Deployed Contracts (Plasma Testnet)
 
-- ZKPayrollPrivate: `0xeE2130Fa435801EB4536eEBCBc9DAF75f2B02051`
+- PrivatePayroll: `0x924C2eb2A8Abd7A8afce79b80191da4076Bc0b47`
+- Verifier: `0x8Be848B25d4A92ca20DBd77B1c28b5e075b8Bd5a`
+- PoseidonT4: `0x5F4E76C5b8c6B61419BD2814b951e6C7B5Cbc573`
 - USDT0: `0x502012b361AebCE43b26Ec812B74D9a51dB4D412`

@@ -1,7 +1,7 @@
 {
-  "name": "zk-payroll-circuits",
+  "name": "private-payroll-circuits",
   "version": "0.1.0",
-  "description": "Circom circuits for ZK Payroll",
+  "description": "Circom circuits for Private Payroll",
   "private": true,
   "scripts": {
     "compile": "circom payroll.circom --r1cs --wasm --sym -o build/",

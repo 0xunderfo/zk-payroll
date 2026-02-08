@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 /**
  * @title IERC20
- * @notice Minimal ERC20 interface for ZK Payroll
+ * @notice Minimal ERC20 interface for Private Payroll
  * @dev We only need transfer functions for our use case
  * 
  * NOTE: Plasma USDT may have additional features (zero-fee transfers)

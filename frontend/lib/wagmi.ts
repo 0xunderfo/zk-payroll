@@ -45,7 +45,7 @@ export const localhost = defineChain({
 });
 
 export const config = getDefaultConfig({
-  appName: "ZK Payroll",
+  appName: "Private Payroll",
   projectId: "YOUR_WALLETCONNECT_PROJECT_ID", // Get from cloud.walletconnect.com
   chains: [localhost, plasmaTestnet],
   ssr: true,
@@ -54,8 +54,8 @@ export const config = getDefaultConfig({
 // Contract addresses (updated after deployment)
 // These will be set when you run `forge script Deploy.s.sol`
 export const contracts = {
-  zkPayroll: {
-    [plasmaTestnet.id]: "0xeE2130Fa435801EB4536eEBCBc9DAF75f2B02051" as `0x${string}`,
+  privatePayroll: {
+    [plasmaTestnet.id]: "0x924C2eb2A8Abd7A8afce79b80191da4076Bc0b47" as `0x${string}`,
     [localhost.id]: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318" as `0x${string}`,
   },
   usdt: {

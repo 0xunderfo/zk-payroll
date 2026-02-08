@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {ZKPayrollPrivate} from "../src/ZKPayrollPrivate.sol";
+import {PrivatePayroll} from "../src/PrivatePayroll.sol";
 import {IPoseidonT4} from "../src/PoseidonT4.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 
@@ -57,8 +57,8 @@ contract MockVerifier6 {
     }
 }
 
-contract ZKPayrollPrivateTest is Test {
-    ZKPayrollPrivate public payroll;
+contract PrivatePayrollTest is Test {
+    PrivatePayroll public payroll;
     MockUSDT public usdt;
     MockVerifier6 public verifier;
     address public poseidonAddr;
@@ -108,7 +108,7 @@ contract ZKPayrollPrivateTest is Test {
         verifier = new MockVerifier6();
         poseidonAddr = _deployPoseidon();
 
-        payroll = new ZKPayrollPrivate(
+        payroll = new PrivatePayroll(
             address(verifier),
             address(usdt),
             poseidonAddr,
@@ -201,7 +201,7 @@ contract ZKPayrollPrivateTest is Test {
         payroll.claimPayment(payrollId, 0, ALICE_SALARY, ALICE_SALT);
 
         vm.prank(alice);
-        vm.expectRevert(ZKPayrollPrivate.AlreadyClaimed.selector);
+        vm.expectRevert(PrivatePayroll.AlreadyClaimed.selector);
         payroll.claimPayment(payrollId, 0, ALICE_SALARY, ALICE_SALT);
     }
 
@@ -210,7 +210,7 @@ contract ZKPayrollPrivateTest is Test {
 
         // Bob tries to claim Alice's slot
         vm.prank(bob);
-        vm.expectRevert(ZKPayrollPrivate.InvalidClaim.selector);
+        vm.expectRevert(PrivatePayroll.InvalidClaim.selector);
         payroll.claimPayment(payrollId, 0, ALICE_SALARY, ALICE_SALT);
     }
 
@@ -219,7 +219,7 @@ contract ZKPayrollPrivateTest is Test {
 
         // Alice tries to claim with wrong amount (Poseidon hash won't match)
         vm.prank(alice);
-        vm.expectRevert(ZKPayrollPrivate.InvalidClaim.selector);
+        vm.expectRevert(PrivatePayroll.InvalidClaim.selector);
         payroll.claimPayment(payrollId, 0, ALICE_SALARY + 1, ALICE_SALT);
     }
 
@@ -227,7 +227,7 @@ contract ZKPayrollPrivateTest is Test {
         uint256 payrollId = _createTestPayroll();
 
         vm.prank(alice);
-        vm.expectRevert(ZKPayrollPrivate.InvalidClaim.selector);
+        vm.expectRevert(PrivatePayroll.InvalidClaim.selector);
         payroll.claimPayment(payrollId, 0, ALICE_SALARY, ALICE_SALT + 1);
     }
 
@@ -240,7 +240,7 @@ contract ZKPayrollPrivateTest is Test {
 
         // Try to reclaim too early
         vm.prank(employer);
-        vm.expectRevert(ZKPayrollPrivate.TooEarly.selector);
+        vm.expectRevert(PrivatePayroll.TooEarly.selector);
         payroll.reclaimUnclaimed(payrollId);
 
         // Warp past deadline
@@ -258,7 +258,7 @@ contract ZKPayrollPrivateTest is Test {
         vm.warp(block.timestamp + 30 days + 1);
 
         vm.prank(alice);
-        vm.expectRevert(ZKPayrollPrivate.Unauthorized.selector);
+        vm.expectRevert(PrivatePayroll.Unauthorized.selector);
         payroll.reclaimUnclaimed(payrollId);
     }
 
@@ -296,7 +296,7 @@ contract ZKPayrollPrivateTest is Test {
 
         // Should not be claimable again
         vm.prank(alice);
-        vm.expectRevert(ZKPayrollPrivate.AlreadyClaimed.selector);
+        vm.expectRevert(PrivatePayroll.AlreadyClaimed.selector);
         payroll.claimPayment(payrollId, 0, ALICE_SALARY, ALICE_SALT);
     }
 
@@ -305,7 +305,7 @@ contract ZKPayrollPrivateTest is Test {
 
         // Non-escrow cannot call markClaimedZeroFee
         vm.prank(alice);
-        vm.expectRevert(ZKPayrollPrivate.Unauthorized.selector);
+        vm.expectRevert(PrivatePayroll.Unauthorized.selector);
         payroll.markClaimedZeroFee(payrollId, 0, alice, ALICE_SALARY, ALICE_SALT);
     }
 

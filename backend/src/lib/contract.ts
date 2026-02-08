@@ -1,5 +1,5 @@
 /**
- * ZKPayroll Contract Interactions
+ * Private Payroll Contract Interactions
  */
 
 import {
@@ -13,8 +13,8 @@ import {
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { plasma } from "./chains";
 
-// ZKPayrollPrivate ABI (only what we need)
-const ZK_PAYROLL_ABI = [
+// PrivatePayroll ABI (only what we need)
+const PRIVATE_PAYROLL_ABI = [
   {
     name: "verifyClaim",
     type: "function",
@@ -143,9 +143,9 @@ function getEscrowClient(): { client: WalletClient; account: PrivateKeyAccount }
 }
 
 function getContractAddress(): Address {
-  const addr = process.env.ZK_PAYROLL_ADDRESS;
+  const addr = process.env.PRIVATE_PAYROLL_ADDRESS;
   if (!addr) {
-    throw new Error("ZK_PAYROLL_ADDRESS not set");
+    throw new Error("PRIVATE_PAYROLL_ADDRESS not set");
   }
   return addr as Address;
 }
@@ -166,7 +166,7 @@ export async function verifyClaim(
   try {
     const result = await client.readContract({
       address: contractAddress,
-      abi: ZK_PAYROLL_ABI,
+      abi: PRIVATE_PAYROLL_ABI,
       functionName: "verifyClaim",
       args: [payrollId, commitmentIndex, recipient, amount, salt],
     });
@@ -189,7 +189,7 @@ export async function isClaimed(
 
   const result = await client.readContract({
     address: contractAddress,
-    abi: ZK_PAYROLL_ABI,
+    abi: PRIVATE_PAYROLL_ABI,
     functionName: "isClaimed",
     args: [payrollId, commitmentIndex],
   });
@@ -211,7 +211,7 @@ export async function markClaimedZeroFee(
 
   const hash = await client.writeContract({
     address: contractAddress,
-    abi: ZK_PAYROLL_ABI,
+    abi: PRIVATE_PAYROLL_ABI,
     functionName: "markClaimedZeroFee",
     args: [payrollId, commitmentIndex, recipient, amount, salt],
     account,
@@ -231,7 +231,7 @@ export async function getPayrollInfo(payrollId: bigint) {
   const [employer, totalAmount, claimedCount, claimedAmount, createdAt] =
     await client.readContract({
       address: contractAddress,
-      abi: ZK_PAYROLL_ABI,
+      abi: PRIVATE_PAYROLL_ABI,
       functionName: "getPayrollInfo",
       args: [payrollId],
     });
@@ -264,7 +264,7 @@ export async function createPayrollRelayed(
   });
 
   if (currentAllowance < totalAmount) {
-    console.log("[contract] Approving USDT for ZKPayroll contract...");
+    console.log("[contract] Approving USDT for PrivatePayroll contract...");
     const approveTx = await client.writeContract({
       address: usdtAddress,
       abi: ERC20_ABI,
@@ -284,7 +284,7 @@ export async function createPayrollRelayed(
 
   const txHash = await client.writeContract({
     address: contractAddress,
-    abi: ZK_PAYROLL_ABI,
+    abi: PRIVATE_PAYROLL_ABI,
     functionName: "createPayrollRelayed",
     args: [employer, proofArray, totalAmount, commitmentsArray, recipientsArray],
     account,

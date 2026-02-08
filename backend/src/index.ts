@@ -1,5 +1,5 @@
 /**
- * ZK Payroll Backend Server
+ * Private Payroll Backend Server
  * Handles zero-fee claims via Plasma relayer
  */
 
@@ -21,8 +21,8 @@ app.use(
       // Allow localhost and Vercel deployments
       if (!origin) return "http://localhost:3000";
       if (origin === "http://localhost:3000") return origin;
-      if (origin === "https://zk-payroll.vercel.app") return origin;
-      if (origin.match(/https:\/\/zk-payroll.*\.vercel\.app/)) return origin;
+      if (origin === "https://private-payroll.vercel.app") return origin;
+      if (origin.match(/https:\/\/private-payroll.*\.vercel\.app/)) return origin;
       return null;
     },
     allowMethods: ["GET", "POST", "OPTIONS"],
@@ -57,7 +57,7 @@ app.onError((err, c) => {
 
 // Start server
 const port = parseInt(process.env.PORT || "3001");
-console.log(`ZK Payroll Backend starting on port ${port}...`);
+console.log(`Private Payroll Backend starting on port ${port}...`);
 
 // Use @hono/node-server for Node.js runtime
 import { serve } from "@hono/node-server";

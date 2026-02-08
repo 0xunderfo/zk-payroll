@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icons/zkpayroll-logo-minimal.svg" alt="Private Payroll" width="80" height="80" />
+  <img src="assets/icons/private-payroll-logo.svg" alt="Private Payroll" width="80" height="80" />
 </p>
 
 # Private Payroll
@@ -52,10 +52,10 @@ This transparency creates real problems: salary negotiations become awkward when
 ┌─────────────────────────────────────────────────────────────────┐
 │                      BACKEND (Hono)                             │
 │  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐   │
-│  │ /api/proof      │  │ /api/claim   │  │ /api/payroll     │    │
-│  │ - snarkjs       │  │ - verify     │  │ - escrow addr    │    │
-│  │ - Groth16       │  │ - zero-fee   │  │ - gasless create │    │
-│  │ - Poseidon      │  │ - status     │  │ - EIP-3009 relay │    │
+│  │ /api/proof       │  │ /api/claim   │  │ /api/payroll     │   │
+│  │ - snarkjs        │  │ - verify     │  │ - escrow addr    │   │
+│  │ - Groth16        │  │ - zero-fee   │  │ - gasless create │   │
+│  │ - Poseidon       │  │ - status     │  │ - EIP-3009 relay │   │
 │  └──────────────────┘  └──────────────┘  └──────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -63,7 +63,7 @@ This transparency creates real problems: salary negotiations become awkward when
 ┌─────────────────────────────────────────────────────────────────┐
 │                    SMART CONTRACTS (Plasma)                     │
 │  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐   │
-│  │ ZKPayrollPrivate │  │ Groth16      │  │ PoseidonT4       │   │
+│  │ PrivatePayroll │  │ Groth16      │  │ PoseidonT4       │   │
 │  │ - createPayroll  │  │ Verifier     │  │ - On-chain hash  │   │
 │  │ - claimPayment   │  │ - BN254      │  │ - Commitment     │   │
 │  │ - markClaimed    │  │              │  │   verification   │   │
@@ -152,9 +152,9 @@ Live frontend:
 
 | Contract | Address |
 |----------|---------|
-| ZKPayrollPrivate | `0xeE2130Fa435801EB4536eEBCBc9DAF75f2B02051` |
-| Groth16 Verifier | `0xa513E6E4b8f2a923D98304ec87F64353C4D5C853` |
-| PoseidonT4 | `0x0165878A594ca255338adfa4d48449f69242Eb8F` |
+| PrivatePayroll | `0x924C2eb2A8Abd7A8afce79b80191da4076Bc0b47` |
+| Groth16 Verifier | `0x8Be848B25d4A92ca20DBd77B1c28b5e075b8Bd5a` |
+| PoseidonT4 | `0x5F4E76C5b8c6B61419BD2814b951e6C7B5Cbc573` |
 | USDT0 | `0x502012b361AebCE43b26Ec812B74D9a51dB4D412` |
 
 ## Documentation

@@ -1,4 +1,4 @@
-# ZK Payroll — Idea & Implementation
+# Private Payroll — Idea & Implementation
 
 ## Problem
 
@@ -22,7 +22,7 @@ Traditional finance solved this decades ago — payroll is confidential. Web3 pa
 
 ## Solution
 
-**ZK Payroll hides individual payment amounts while proving the total is correct.**
+**Private Payroll hides individual payment amounts while proving the total is correct.**
 
 The core insight: employers need to prove they're paying what they claim (accountability), but individual amounts don't need to be public (privacy).
 
@@ -69,7 +69,7 @@ DAOs are the perfect initial market:
 
 Aleo raised $200M+ betting that enterprises need private smart contracts for payroll. They're right about the need, wrong about the timeline. Enterprises won't wait 5 years for a new L1 to mature.
 
-ZK Payroll brings private payroll to production-ready EVM chains today.
+Private Payroll brings private payroll to production-ready EVM chains today.
 
 ## Implementation
 
@@ -99,7 +99,7 @@ This means:
 - Each recipient can only claim their specific amount (commitment is binding)
 - Individual amounts never appear on-chain (private inputs)
 
-### Smart Contract: `ZKPayrollPrivate.sol`
+### Smart Contract: `PrivatePayroll.sol`
 
 **Two-phase model:**
 

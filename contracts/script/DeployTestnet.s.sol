@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Script, console2} from "forge-std/Script.sol";
-import {ZKPayrollPrivate} from "../src/ZKPayrollPrivate.sol";
+import {PrivatePayroll} from "../src/PrivatePayroll.sol";
 import {Groth16Verifier} from "../src/Verifier.sol";
 
 /**
@@ -38,14 +38,14 @@ contract DeployTestnetScript is Script {
         Groth16Verifier verifier = new Groth16Verifier();
         console2.log("Verifier deployed at:", address(verifier));
 
-        // 3. Deploy ZKPayrollPrivate with existing USDT0
-        ZKPayrollPrivate payroll = new ZKPayrollPrivate(
+        // 3. Deploy PrivatePayroll with existing USDT0
+        PrivatePayroll payroll = new PrivatePayroll(
             address(verifier),
             USDT0,
             poseidonAddr,
             escrowAddress
         );
-        console2.log("ZKPayrollPrivate deployed at:", address(payroll));
+        console2.log("PrivatePayroll deployed at:", address(payroll));
 
         vm.stopBroadcast();
 
@@ -53,7 +53,7 @@ contract DeployTestnetScript is Script {
         console2.log("Deployment complete!");
         console2.log("");
         console2.log("Addresses:");
-        console2.log("  ZKPayrollPrivate:", address(payroll));
+        console2.log("  PrivatePayroll:", address(payroll));
         console2.log("  Verifier:", address(verifier));
         console2.log("  PoseidonT4:", poseidonAddr);
         console2.log("  USDT0:", USDT0);

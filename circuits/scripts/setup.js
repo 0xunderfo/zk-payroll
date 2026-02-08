@@ -15,7 +15,7 @@ function run(cmd, opts = {}) {
 }
 
 async function main() {
-  console.log("=== ZK Payroll v2 Circuit Setup ===\n");
+  console.log("=== Private Payroll v2 Circuit Setup ===\n");
 
   // 1. Compile circuit
   console.log("1. Compiling payroll_private circuit...");
@@ -31,7 +31,7 @@ async function main() {
 
   // 4. Contribute to ceremony
   console.log("\n4. Contributing to ceremony...");
-  run(`snarkjs zkey contribute build/circuit_0000.zkey build/circuit_final.zkey --name="ZK Payroll v2" -e="zk payroll v2 hackathon entropy"`);
+  run(`snarkjs zkey contribute build/circuit_0000.zkey build/circuit_final.zkey --name="Private Payroll v2" -e="private payroll v2 hackathon entropy"`);
 
   // 5. Export verification key
   console.log("\n5. Exporting verification key...");

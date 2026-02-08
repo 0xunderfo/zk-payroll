@@ -2,12 +2,12 @@
 pragma solidity ^0.8.24;
 
 import {Script, console2} from "forge-std/Script.sol";
-import {ZKPayrollPrivate} from "../src/ZKPayrollPrivate.sol";
+import {PrivatePayroll} from "../src/PrivatePayroll.sol";
 import {Groth16Verifier} from "../src/Verifier.sol";
 
 /**
  * @title Deploy
- * @notice Deployment script for ZK Payroll v2.1 contracts with escrow
+ * @notice Deployment script for Private Payroll v2.1 contracts with escrow
  *
  * Usage (localhost):
  *   ESCROW_ADDRESS=0x... forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast --private-key $PRIVATE_KEY
@@ -44,14 +44,14 @@ contract DeployScript is Script {
         MockUSDT usdt = new MockUSDT();
         console2.log("MockUSDT deployed at:", address(usdt));
 
-        // 4. Deploy ZKPayrollPrivate with escrow
-        ZKPayrollPrivate payroll = new ZKPayrollPrivate(
+        // 4. Deploy PrivatePayroll with escrow
+        PrivatePayroll payroll = new PrivatePayroll(
             address(verifier),
             address(usdt),
             poseidonAddr,
             escrowAddress
         );
-        console2.log("ZKPayrollPrivate deployed at:", address(payroll));
+        console2.log("PrivatePayroll deployed at:", address(payroll));
         console2.log("Escrow EOA:", escrowAddress);
 
         vm.stopBroadcast();
@@ -64,7 +64,7 @@ contract DeployScript is Script {
         console2.log("cast send <USDT> 'approve(address,uint256)' <PAYROLL> max --private-key $ESCROW_KEY");
         console2.log("");
         console2.log("Addresses:");
-        console2.log("  zkPayroll:", address(payroll));
+        console2.log("  payroll:", address(payroll));
         console2.log("  usdt:", address(usdt));
         console2.log("  escrow:", escrowAddress);
     }

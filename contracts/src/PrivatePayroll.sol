@@ -5,7 +5,7 @@ import {IERC20} from "./interfaces/IERC20.sol";
 import {IPoseidonT4} from "./PoseidonT4.sol";
 
 /**
- * @title ZKPayrollPrivate
+ * @title PrivatePayroll
  * @notice Privacy-preserving payroll with Poseidon commitment scheme + zero-fee support
  * @dev Two-phase model with escrow:
  *   Phase 1 (Employer): createPayroll - transfer to escrow + store commitments
@@ -23,7 +23,7 @@ import {IPoseidonT4} from "./PoseidonT4.sol";
  *
  * Built at ETH Oxford 2026
  */
-contract ZKPayrollPrivate {
+contract PrivatePayroll {
     // ============ Constants ============
 
     uint256 public constant MAX_RECIPIENTS = 5;

@@ -51,7 +51,7 @@ export default function CreatePayroll() {
 
   const { writeContractAsync } = useWriteContract();
 
-  const zkPayrollAddress = contracts.zkPayroll[chainId as keyof typeof contracts.zkPayroll] || contracts.zkPayroll[31337];
+  const payrollAddress = contracts.privatePayroll[chainId as keyof typeof contracts.privatePayroll] || contracts.privatePayroll[31337];
   const usdtAddress = contracts.usdt[chainId as keyof typeof contracts.usdt] || contracts.usdt[31337];
 
   const explorerUrl = chainId === 9746 ? "https://testnet.plasmascan.to" : null;
@@ -196,7 +196,7 @@ export default function CreatePayroll() {
         address: usdtAddress as `0x${string}`,
         abi: erc20Abi,
         functionName: "approve",
-        args: [zkPayrollAddress as `0x${string}`, rawTotal],
+        args: [payrollAddress as `0x${string}`, rawTotal],
       });
 
       // Step 2: Create payroll
@@ -205,7 +205,7 @@ export default function CreatePayroll() {
       // Convert proof strings to bigints for contract
       const proofBigInts = proofData.proof.map((p) => BigInt(p));
       const executeTx = await writeContractAsync({
-        address: zkPayrollAddress as `0x${string}`,
+        address: payrollAddress as `0x${string}`,
         abi: zkPayrollPrivateAbi,
         functionName: "createPayroll",
         args: [

@@ -4,7 +4,7 @@
 
 set -e
 
-echo "=== ZK Payroll Circuit Compilation ==="
+echo "=== Private Payroll Circuit Compilation ==="
 echo ""
 
 # Check if circom is available
