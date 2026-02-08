@@ -1,152 +1,12 @@
-export const zkPayrollPrivateAbi = [
-  {
-    type: "function",
-    name: "createPayroll",
-    inputs: [
-      { name: "proof", type: "uint256[8]" },
-      { name: "totalAmount", type: "uint256" },
-      { name: "commitments", type: "uint256[5]" },
-      { name: "recipients", type: "address[5]" },
-    ],
-    outputs: [{ name: "payrollId", type: "uint256" }],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "createPayrollRelayed",
-    inputs: [
-      { name: "employer", type: "address" },
-      { name: "proof", type: "uint256[8]" },
-      { name: "totalAmount", type: "uint256" },
-      { name: "commitments", type: "uint256[5]" },
-      { name: "recipients", type: "address[5]" },
-    ],
-    outputs: [{ name: "payrollId", type: "uint256" }],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "claimPayment",
-    inputs: [
-      { name: "payrollId", type: "uint256" },
-      { name: "commitmentIndex", type: "uint256" },
-      { name: "amount", type: "uint256" },
-      { name: "salt", type: "uint256" },
-    ],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "reclaimUnclaimed",
-    inputs: [{ name: "payrollId", type: "uint256" }],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "getCommitments",
-    inputs: [{ name: "payrollId", type: "uint256" }],
-    outputs: [{ name: "", type: "uint256[5]" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "getRecipients",
-    inputs: [{ name: "payrollId", type: "uint256" }],
-    outputs: [{ name: "", type: "address[5]" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "isClaimed",
-    inputs: [
-      { name: "payrollId", type: "uint256" },
-      { name: "index", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "getPayrollInfo",
-    inputs: [{ name: "payrollId", type: "uint256" }],
-    outputs: [
-      { name: "employer", type: "address" },
-      { name: "totalAmount", type: "uint256" },
-      { name: "claimedCount", type: "uint256" },
-      { name: "claimedAmount", type: "uint256" },
-      { name: "createdAt", type: "uint256" },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "nextPayrollId",
-    inputs: [],
-    outputs: [{ name: "", type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "paymentToken",
-    inputs: [],
-    outputs: [{ name: "", type: "address" }],
-    stateMutability: "view",
-  },
-  {
-    type: "event",
-    name: "PayrollCreated",
-    inputs: [
-      { name: "payrollId", type: "uint256", indexed: true },
-      { name: "employer", type: "address", indexed: true },
-      { name: "totalAmount", type: "uint256", indexed: false },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "PaymentClaimed",
-    inputs: [
-      { name: "payrollId", type: "uint256", indexed: true },
-      { name: "commitmentIndex", type: "uint256", indexed: true },
-      { name: "recipient", type: "address", indexed: false },
-      { name: "amount", type: "uint256", indexed: false },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "FundsReclaimed",
-    inputs: [
-      { name: "payrollId", type: "uint256", indexed: true },
-      { name: "employer", type: "address", indexed: true },
-      { name: "amount", type: "uint256", indexed: false },
-    ],
-    anonymous: false,
-  },
-  { type: "error", name: "InvalidProof", inputs: [] },
-  { type: "error", name: "InvalidInputs", inputs: [] },
-  { type: "error", name: "InvalidTotalAmount", inputs: [] },
-  { type: "error", name: "TransferFailed", inputs: [] },
-  { type: "error", name: "AlreadyClaimed", inputs: [] },
-  { type: "error", name: "InvalidClaim", inputs: [] },
-  { type: "error", name: "PayrollNotFound", inputs: [] },
-  { type: "error", name: "TooEarly", inputs: [] },
-  { type: "error", name: "Unauthorized", inputs: [] },
-  { type: "error", name: "NothingToReclaim", inputs: [] },
-] as const;
-
-// EIP-712 Domain for USDT0 on Plasma Testnet
+// EIP-712 domain for USDT0 on Plasma Testnet.
 export const USDT0_EIP712_DOMAIN = {
   name: "USDT0",
   version: "1",
-  chainId: 9746, // Plasma Testnet
-  verifyingContract: "0x502012b361AebCE43b26Ec812B74D9a51dB4D412" as `0x${string}`, // USDT0
+  chainId: 9746,
+  verifyingContract: "0x502012b361AebCE43b26Ec812B74D9a51dB4D412" as `0x${string}`,
 } as const;
 
-// EIP-3009 TransferWithAuthorization types for gasless transfers
-// Note: transferWithAuthorization allows anyone to submit, unlike receiveWithAuthorization
+// EIP-3009 TransferWithAuthorization types.
 export const TRANSFER_WITH_AUTHORIZATION_TYPES = {
   TransferWithAuthorization: [
     { name: "from", type: "address" },
@@ -168,16 +28,6 @@ export interface EIP3009Authorization {
 }
 
 export const erc20Abi = [
-  {
-    type: "function",
-    name: "approve",
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-    stateMutability: "nonpayable",
-  },
   {
     type: "function",
     name: "balanceOf",

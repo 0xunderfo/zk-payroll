@@ -55,7 +55,7 @@ export const config = getDefaultConfig({
 // These will be set when you run `forge script Deploy.s.sol`
 export const contracts = {
   privatePayroll: {
-    [plasmaTestnet.id]: "0x924C2eb2A8Abd7A8afce79b80191da4076Bc0b47" as `0x${string}`,
+    [plasmaTestnet.id]: "0x058a14e29824a11343663c22974D47f0c6188649" as `0x${string}`,
     [localhost.id]: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318" as `0x${string}`,
   },
   usdt: {

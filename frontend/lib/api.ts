@@ -11,7 +11,10 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:300
 export interface VerifyClaimResponse {
   valid: boolean;
   claimed: boolean;
-  escrowAddress: string;
+  amount?: string;
+  recipient?: string;
+  root?: string;
+  error?: string;
 }
 
 export interface ZeroFeeClaimResponse {
@@ -23,32 +26,26 @@ export interface ZeroFeeClaimResponse {
 
 export interface ClaimStatusResponse {
   claimId: string;
-  status: "pending" | "submitted" | "confirmed" | "failed";
+  status: "submitted" | "confirmed" | "failed";
   txHash?: string;
   error?: string;
-  recipient: string;
-  amount: string;
+  nullifierHash?: string;
+  requestHash?: string;
 }
 
 /**
  * Verify a claim is valid before submitting
  */
 export async function verifyClaim(
-  payrollId: string,
-  commitmentIndex: string,
+  claimToken: string,
   recipient: string,
-  amount: string,
-  salt: string
 ): Promise<VerifyClaimResponse> {
   const response = await fetch(`${BACKEND_URL}/api/claim/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      payrollId,
-      commitmentIndex,
+      claimToken,
       recipient,
-      amount,
-      salt,
     }),
   });
 
@@ -64,21 +61,15 @@ export async function verifyClaim(
  * Submit a zero-fee claim via the backend
  */
 export async function submitZeroFeeClaim(
-  payrollId: string,
-  commitmentIndex: string,
+  claimToken: string,
   recipient: string,
-  amount: string,
-  salt: string
 ): Promise<ZeroFeeClaimResponse> {
   const response = await fetch(`${BACKEND_URL}/api/claim/zero-fee`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      payrollId,
-      commitmentIndex,
+      claimToken,
       recipient,
-      amount,
-      salt,
     }),
   });
 
@@ -140,42 +131,6 @@ export async function checkBackendHealth(): Promise<boolean> {
   }
 }
 
-export interface ProofGenerationResponse {
-  proof: string[];
-  publicSignals: string[];
-  commitments: string[];
-  claimCredentials: ClaimCredential[];
-}
-
-/**
- * Generate ZK proof via backend (snarkjs doesn't work in browser)
- */
-export async function generateProof(
-  recipients: string[],
-  amounts: string[],
-  totalAmount: string,
-  options?: { masterSecret?: string; payrollIdentifier?: string }
-): Promise<ProofGenerationResponse> {
-  const response = await fetch(`${BACKEND_URL}/api/proof/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      recipients,
-      amounts,
-      totalAmount,
-      masterSecret: options?.masterSecret,
-      payrollIdentifier: options?.payrollIdentifier,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(error.error || "Proof generation failed");
-  }
-
-  return response.json();
-}
-
 // Gasless payroll creation types
 export interface EscrowAddressResponse {
   address: string;
@@ -185,9 +140,6 @@ export interface CreatePayrollGaslessRequest {
   recipients: string[];
   amounts: string[];
   totalAmount: string;
-  proof: string[];
-  commitments: string[];
-  claimCredentials: ClaimCredential[];
   employer: string;
   authorization: {
     from: string;
@@ -202,10 +154,15 @@ export interface CreatePayrollGaslessRequest {
 
 export interface CreatePayrollGaslessResponse {
   success: boolean;
-  payrollId: number;
+  batchId: string;
+  root: string;
   txHash: string;
   transferTxHash?: string;
-  claimCredentials: Array<ClaimCredential & { claimUrl: string }>;
+  claimCredentials: Array<ClaimCredential & {
+    claimToken: string;
+    claimUrl: string;
+    nullifierHash?: string;
+  }>;
 }
 
 /**

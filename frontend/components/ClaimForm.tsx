@@ -4,40 +4,24 @@ import { useState } from "react";
 
 interface ClaimFormProps {
   initialData?: {
-    payrollId: string;
-    commitmentIndex: string;
-    amount: string;
-    salt: string;
+    claimToken?: string;
   };
-  onClaim: (data: {
-    payrollId: bigint;
-    commitmentIndex: bigint;
-    amount: bigint;
-    salt: bigint;
-  }) => void;
+  onClaim: (data: { claimToken: string }) => void;
   isSubmitting: boolean;
 }
 
 export function ClaimForm({ initialData, onClaim, isSubmitting }: ClaimFormProps) {
-  const [payrollId, setPayrollId] = useState(initialData?.payrollId || "");
-  const [commitmentIndex, setCommitmentIndex] = useState(initialData?.commitmentIndex || "");
-  const [amount, setAmount] = useState(initialData?.amount || "");
-  const [salt, setSalt] = useState(initialData?.salt || "");
+  const [claimToken, setClaimToken] = useState(initialData?.claimToken || "");
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = () => {
     setError(null);
     try {
-      if (!payrollId || !amount || !salt) {
-        setError("Please fill in all fields");
+      if (!claimToken.trim()) {
+        setError("Claim token is required");
         return;
       }
-      onClaim({
-        payrollId: BigInt(payrollId),
-        commitmentIndex: BigInt(commitmentIndex || "0"),
-        amount: BigInt(amount),
-        salt: BigInt(salt),
-      });
+      onClaim({ claimToken: claimToken.trim() });
     } catch (e: any) {
       setError("Invalid input values");
     }
@@ -48,54 +32,14 @@ export function ClaimForm({ initialData, onClaim, isSubmitting }: ClaimFormProps
   return (
     <div className="space-y-4">
       <div>
-        <label className="text-zk-dim text-xs uppercase tracking-wider font-display block mb-1.5">Payroll ID</label>
-        <input
-          type="text"
-          value={payrollId}
-          onChange={(e) => setPayrollId(e.target.value)}
-          placeholder="0"
-          className={inputClass}
-        />
-      </div>
-
-      <div>
         <label className="text-zk-dim text-xs uppercase tracking-wider font-display block mb-1.5">
-          Commitment Index
+          Claim Token
         </label>
         <input
           type="text"
-          value={commitmentIndex}
-          onChange={(e) => setCommitmentIndex(e.target.value)}
-          placeholder="0"
-          className={inputClass}
-        />
-      </div>
-
-      <div>
-        <label className="text-zk-dim text-xs uppercase tracking-wider font-display block mb-1.5">
-          Amount (raw, 6 decimals)
-        </label>
-        <input
-          type="text"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="3000000000"
-          className={inputClass}
-        />
-        {amount && (
-          <p className="text-zk-dim text-xs mt-1 font-display tabular-nums">
-            = {(Number(amount) / 1e6).toFixed(2)} USDT
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label className="text-zk-dim text-xs uppercase tracking-wider font-display block mb-1.5">Salt</label>
-        <input
-          type="text"
-          value={salt}
-          onChange={(e) => setSalt(e.target.value)}
-          placeholder="Secret salt value"
+          value={claimToken}
+          onChange={(e) => setClaimToken(e.target.value)}
+          placeholder="Paste token from claim link"
           className={inputClass}
         />
       </div>

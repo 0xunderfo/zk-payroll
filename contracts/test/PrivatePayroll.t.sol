@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Test, console2} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {PrivatePayroll} from "../src/PrivatePayroll.sol";
-import {IPoseidonT4} from "../src/PoseidonT4.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 
 contract MockUSDT is IERC20 {
@@ -46,285 +45,250 @@ contract MockUSDT is IERC20 {
     }
 }
 
-contract MockVerifier6 {
+contract MockVerifier3 {
+    bool public shouldVerify = true;
+
+    function setShouldVerify(bool value) external {
+        shouldVerify = value;
+    }
+
     function verifyProof(
         uint256[2] calldata,
         uint256[2][2] calldata,
         uint256[2] calldata,
-        uint256[6] calldata
-    ) external pure returns (bool) {
-        return true;
+        uint256[3] calldata
+    ) external view returns (bool) {
+        return shouldVerify;
+    }
+}
+
+contract MockPoseidonT4 {
+    function poseidon(uint256[3] memory input) external pure returns (uint256) {
+        return uint256(keccak256(abi.encode(input[0], input[1], input[2])));
     }
 }
 
 contract PrivatePayrollTest is Test {
     PrivatePayroll public payroll;
     MockUSDT public usdt;
-    MockVerifier6 public verifier;
-    address public poseidonAddr;
+    MockVerifier3 public verifier;
+    MockPoseidonT4 public poseidon;
 
     address public employer = address(0x1);
-    address public alice = address(0x2);
-    address public bob = address(0x3);
-    address public charlie = address(0x4);
-    address public escrow = address(0x5); // EOA that holds all funds
+    address public recipient = address(0x2);
+    address public recipientTwo = address(0x3);
+    address public relayer = address(0x4);
+    address public escrow = address(0x5);
 
-    uint256 constant ALICE_SALARY = 3000e6;
-    uint256 constant BOB_SALARY = 4000e6;
-    uint256 constant CHARLIE_SALARY = 3000e6;
-    uint256 constant TOTAL = ALICE_SALARY + BOB_SALARY + CHARLIE_SALARY;
-
-    // Test salts
-    uint256 constant ALICE_SALT = 12345;
-    uint256 constant BOB_SALT = 67890;
-    uint256 constant CHARLIE_SALT = 11111;
-
-    // Commitments will be computed after Poseidon is deployed
-    uint256[5] commitments;
-    address[5] recipients;
-
-    function _deployPoseidon() internal returns (address) {
-        bytes memory bytecode = vm.parseBytes(vm.readFile("poseidon_bytecode.txt"));
-        address deployed;
-        assembly {
-            deployed := create(0, add(bytecode, 0x20), mload(bytecode))
-        }
-        require(deployed != address(0), "Poseidon deployment failed");
-        return deployed;
-    }
-
-    function _computeCommitment(
-        address recipient,
-        uint256 amount,
-        uint256 salt
-    ) internal view returns (uint256) {
-        return IPoseidonT4(poseidonAddr).poseidon(
-            [uint256(uint160(recipient)), amount, salt]
-        );
-    }
+    uint256 constant ROOT_A = 1_111;
+    uint256 constant ROOT_B = 2_222;
+    bytes32 constant BATCH_A = keccak256("batch-a");
+    bytes32 constant BATCH_B = keccak256("batch-b");
+    uint256 constant AMOUNT = 3_000e6;
+    uint256 constant FEE = 10e6;
+    uint256 constant NULLIFIER_A = 101;
+    uint256 constant NULLIFIER_B = 202;
+    bytes32 constant AUTH_A = keccak256("auth-a");
+    bytes32 constant AUTH_B = keccak256("auth-b");
 
     function setUp() public {
         usdt = new MockUSDT();
-        verifier = new MockVerifier6();
-        poseidonAddr = _deployPoseidon();
+        verifier = new MockVerifier3();
+        poseidon = new MockPoseidonT4();
+        payroll = new PrivatePayroll(address(verifier), address(usdt), address(poseidon), escrow);
 
-        payroll = new PrivatePayroll(
-            address(verifier),
-            address(usdt),
-            poseidonAddr,
-            escrow
-        );
-
-        // Escrow approves contract for unlimited transfers (enables fallback claims)
+        // Escrow approves contract for direct fallback path.
         vm.prank(escrow);
         usdt.approve(address(payroll), type(uint256).max);
 
-        // Compute commitments
-        commitments[0] = _computeCommitment(alice, ALICE_SALARY, ALICE_SALT);
-        commitments[1] = _computeCommitment(bob, BOB_SALARY, BOB_SALT);
-        commitments[2] = _computeCommitment(charlie, CHARLIE_SALARY, CHARLIE_SALT);
-        commitments[3] = _computeCommitment(address(0), 0, 0);
-        commitments[4] = _computeCommitment(address(0), 0, 0);
-
-        recipients = [alice, bob, charlie, address(0), address(0)];
-
-        // Fund employer
-        usdt.mint(employer, TOTAL);
+        // Seed balances for tests.
+        usdt.mint(employer, 20_000e6);
+        usdt.mint(escrow, 20_000e6);
         vm.prank(employer);
-        usdt.approve(address(payroll), TOTAL);
+        usdt.approve(address(payroll), type(uint256).max);
     }
 
-    function _createTestPayroll() internal returns (uint256) {
-        uint256[8] memory proof;
+    function _dummyProof() internal pure returns (uint256[8] memory proof) {
+        return proof;
+    }
+
+    function _requestHash(
+        uint256 root,
+        uint256 nullifierHash,
+        address recipientAddr,
+        address relayerAddr,
+        uint256 fee,
+        uint256 amount
+    ) internal view returns (uint256) {
+        return payroll.computeRequestHash(
+            root,
+            nullifierHash,
+            recipientAddr,
+            relayerAddr,
+            fee,
+            amount
+        );
+    }
+
+    function test_RegisterRootByEscrow() public {
+        vm.prank(escrow);
+        payroll.registerRoot(ROOT_A, BATCH_A, 3, 10_000e6);
+
+        assertTrue(payroll.knownRoots(ROOT_A));
+        assertEq(payroll.latestRoot(), ROOT_A);
+        assertEq(payroll.rootCount(), 1);
+    }
+
+    function test_RevertRegisterRootByNonEscrow() public {
         vm.prank(employer);
-        return payroll.createPayroll(proof, TOTAL, commitments, recipients);
-    }
-
-    function test_CreatePayrollWithProof() public {
-        uint256 payrollId = _createTestPayroll();
-
-        (
-            address emp,
-            uint256 total,
-            uint256 claimedCount,
-            uint256 claimedAmount,
-            uint256 createdAt
-        ) = payroll.getPayrollInfo(payrollId);
-
-        assertEq(emp, employer);
-        assertEq(total, TOTAL);
-        assertEq(claimedCount, 0);
-        assertEq(claimedAmount, 0);
-        assertGt(createdAt, 0);
-
-        // Verify funds in escrow (not contract)
-        assertEq(usdt.balanceOf(escrow), TOTAL);
-        assertEq(usdt.balanceOf(address(payroll)), 0);
-        assertEq(usdt.balanceOf(employer), 0);
-
-        // Verify commitments stored
-        uint256[5] memory stored = payroll.getCommitments(payrollId);
-        for (uint256 i = 0; i < 5; i++) {
-            assertEq(stored[i], commitments[i]);
-        }
-    }
-
-    function test_ClaimPayment() public {
-        uint256 payrollId = _createTestPayroll();
-
-        // Alice claims
-        vm.prank(alice);
-        payroll.claimPayment(payrollId, 0, ALICE_SALARY, ALICE_SALT);
-
-        assertEq(usdt.balanceOf(alice), ALICE_SALARY);
-        assertTrue(payroll.isClaimed(payrollId, 0));
-
-        // Bob claims
-        vm.prank(bob);
-        payroll.claimPayment(payrollId, 1, BOB_SALARY, BOB_SALT);
-
-        assertEq(usdt.balanceOf(bob), BOB_SALARY);
-        assertTrue(payroll.isClaimed(payrollId, 1));
-
-        // Charlie claims
-        vm.prank(charlie);
-        payroll.claimPayment(payrollId, 2, CHARLIE_SALARY, CHARLIE_SALT);
-
-        assertEq(usdt.balanceOf(charlie), CHARLIE_SALARY);
-        assertEq(usdt.balanceOf(escrow), 0); // All claimed from escrow
-    }
-
-    function test_RevertOnDoubleClaim() public {
-        uint256 payrollId = _createTestPayroll();
-
-        vm.prank(alice);
-        payroll.claimPayment(payrollId, 0, ALICE_SALARY, ALICE_SALT);
-
-        vm.prank(alice);
-        vm.expectRevert(PrivatePayroll.AlreadyClaimed.selector);
-        payroll.claimPayment(payrollId, 0, ALICE_SALARY, ALICE_SALT);
-    }
-
-    function test_RevertOnWrongRecipient() public {
-        uint256 payrollId = _createTestPayroll();
-
-        // Bob tries to claim Alice's slot
-        vm.prank(bob);
-        vm.expectRevert(PrivatePayroll.InvalidClaim.selector);
-        payroll.claimPayment(payrollId, 0, ALICE_SALARY, ALICE_SALT);
-    }
-
-    function test_RevertOnWrongAmount() public {
-        uint256 payrollId = _createTestPayroll();
-
-        // Alice tries to claim with wrong amount (Poseidon hash won't match)
-        vm.prank(alice);
-        vm.expectRevert(PrivatePayroll.InvalidClaim.selector);
-        payroll.claimPayment(payrollId, 0, ALICE_SALARY + 1, ALICE_SALT);
-    }
-
-    function test_RevertOnWrongSalt() public {
-        uint256 payrollId = _createTestPayroll();
-
-        vm.prank(alice);
-        vm.expectRevert(PrivatePayroll.InvalidClaim.selector);
-        payroll.claimPayment(payrollId, 0, ALICE_SALARY, ALICE_SALT + 1);
-    }
-
-    function test_ReclaimAfterDeadline() public {
-        uint256 payrollId = _createTestPayroll();
-
-        // Only Alice claims
-        vm.prank(alice);
-        payroll.claimPayment(payrollId, 0, ALICE_SALARY, ALICE_SALT);
-
-        // Try to reclaim too early
-        vm.prank(employer);
-        vm.expectRevert(PrivatePayroll.TooEarly.selector);
-        payroll.reclaimUnclaimed(payrollId);
-
-        // Warp past deadline
-        vm.warp(block.timestamp + 30 days + 1);
-
-        uint256 remaining = TOTAL - ALICE_SALARY;
-        vm.prank(employer);
-        payroll.reclaimUnclaimed(payrollId);
-
-        assertEq(usdt.balanceOf(employer), remaining);
-    }
-
-    function test_RevertOnNonEmployerReclaim() public {
-        uint256 payrollId = _createTestPayroll();
-        vm.warp(block.timestamp + 30 days + 1);
-
-        vm.prank(alice);
         vm.expectRevert(PrivatePayroll.Unauthorized.selector);
-        payroll.reclaimUnclaimed(payrollId);
+        payroll.registerRoot(ROOT_A, BATCH_A, 3, 10_000e6);
     }
 
-    // ============ Zero-Fee Path Tests ============
+    function test_DepositAndRegisterRoot() public {
+        uint256 escrowBalanceBefore = usdt.balanceOf(escrow);
 
-    function test_VerifyClaim() public {
-        uint256 payrollId = _createTestPayroll();
+        vm.prank(employer);
+        payroll.depositAndRegisterRoot(ROOT_A, BATCH_A, 3, 10_000e6);
 
-        // Valid claim should return true
-        bool valid = payroll.verifyClaim(payrollId, 0, alice, ALICE_SALARY, ALICE_SALT);
+        assertTrue(payroll.knownRoots(ROOT_A));
+        assertEq(payroll.latestRoot(), ROOT_A);
+        assertEq(usdt.balanceOf(escrow), escrowBalanceBefore + 10_000e6);
+        assertEq(usdt.balanceOf(employer), 10_000e6);
+    }
+
+    function test_ReserveAndFinalizeZeroFeeWithdrawal() public {
+        vm.prank(escrow);
+        payroll.registerRoot(ROOT_A, BATCH_A, 3, 10_000e6);
+
+        uint256[8] memory proof = _dummyProof();
+        uint256 requestHash =
+            _requestHash(ROOT_A, NULLIFIER_A, recipient, relayer, FEE, AMOUNT);
+
+        vm.prank(escrow);
+        payroll.reserveZeroFeeWithdrawal(proof, ROOT_A, NULLIFIER_A, requestHash, AUTH_A);
+
+        (uint256 storedRequestHash, bytes32 authId, , bool exists) =
+            payroll.getPendingWithdrawal(NULLIFIER_A);
+        assertEq(storedRequestHash, requestHash);
+        assertTrue(exists);
+        assertEq(authId, AUTH_A);
+
+        vm.prank(escrow);
+        payroll.finalizeZeroFeeWithdrawal(NULLIFIER_A, AUTH_A);
+
+        assertTrue(payroll.nullifierSpent(NULLIFIER_A));
+        (, , , exists) = payroll.getPendingWithdrawal(NULLIFIER_A);
+        assertFalse(exists);
+    }
+
+    function test_CancelReservationAllowsRetry() public {
+        vm.prank(escrow);
+        payroll.registerRoot(ROOT_A, BATCH_A, 3, 10_000e6);
+
+        uint256[8] memory proof = _dummyProof();
+        uint256 requestHash =
+            _requestHash(ROOT_A, NULLIFIER_A, recipient, relayer, FEE, AMOUNT);
+
+        vm.prank(escrow);
+        payroll.reserveZeroFeeWithdrawal(proof, ROOT_A, NULLIFIER_A, requestHash, AUTH_A);
+
+        vm.prank(escrow);
+        payroll.cancelReservedWithdrawal(NULLIFIER_A, AUTH_A, keccak256("relayer-failed"));
+
+        (, , , bool exists) = payroll.getPendingWithdrawal(NULLIFIER_A);
+        assertFalse(exists);
+        assertFalse(payroll.nullifierSpent(NULLIFIER_A));
+
+        vm.prank(escrow);
+        payroll.reserveZeroFeeWithdrawal(proof, ROOT_A, NULLIFIER_A, requestHash, AUTH_B);
+
+        (uint256 requestHashAfterRetry, bytes32 authId, , bool existsAfterRetry) =
+            payroll.getPendingWithdrawal(NULLIFIER_A);
+        assertTrue(existsAfterRetry);
+        assertEq(requestHashAfterRetry, requestHash);
+        assertEq(authId, AUTH_B);
+    }
+
+    function test_DirectWithdrawFallback() public {
+        vm.prank(escrow);
+        payroll.registerRoot(ROOT_A, BATCH_A, 3, 10_000e6);
+
+        uint256 recipientBalanceBefore = usdt.balanceOf(recipient);
+        uint256 escrowBalanceBefore = usdt.balanceOf(escrow);
+        uint256[8] memory proof = _dummyProof();
+
+        vm.prank(recipient);
+        payroll.directWithdraw(proof, ROOT_A, NULLIFIER_B, AMOUNT);
+
+        assertTrue(payroll.nullifierSpent(NULLIFIER_B));
+        assertEq(usdt.balanceOf(recipient), recipientBalanceBefore + AMOUNT);
+        assertEq(usdt.balanceOf(escrow), escrowBalanceBefore - AMOUNT);
+    }
+
+    function test_RevertOnUnknownRoot() public {
+        uint256[8] memory proof = _dummyProof();
+        vm.prank(recipient);
+        vm.expectRevert(PrivatePayroll.UnknownRoot.selector);
+        payroll.directWithdraw(proof, ROOT_A, NULLIFIER_B, AMOUNT);
+    }
+
+    function test_RevertOnNullifierReuse() public {
+        vm.prank(escrow);
+        payroll.registerRoot(ROOT_A, BATCH_A, 3, 10_000e6);
+
+        uint256[8] memory proof = _dummyProof();
+        vm.prank(recipient);
+        payroll.directWithdraw(proof, ROOT_A, NULLIFIER_B, AMOUNT);
+
+        vm.prank(recipientTwo);
+        vm.expectRevert(PrivatePayroll.NullifierAlreadyUsed.selector);
+        payroll.directWithdraw(proof, ROOT_A, NULLIFIER_B, AMOUNT);
+    }
+
+    function test_RevertOnFinalizeAuthorizationMismatch() public {
+        vm.prank(escrow);
+        payroll.registerRoot(ROOT_A, BATCH_A, 3, 10_000e6);
+
+        uint256[8] memory proof = _dummyProof();
+        uint256 requestHash =
+            _requestHash(ROOT_A, NULLIFIER_A, recipient, relayer, FEE, AMOUNT);
+        vm.prank(escrow);
+        payroll.reserveZeroFeeWithdrawal(proof, ROOT_A, NULLIFIER_A, requestHash, AUTH_A);
+
+        vm.prank(escrow);
+        vm.expectRevert(PrivatePayroll.AuthorizationMismatch.selector);
+        payroll.finalizeZeroFeeWithdrawal(NULLIFIER_A, AUTH_B);
+    }
+
+    function test_RevertWhenVerifierFails() public {
+        vm.prank(escrow);
+        payroll.registerRoot(ROOT_B, BATCH_B, 2, 5_000e6);
+
+        verifier.setShouldVerify(false);
+        uint256[8] memory proof = _dummyProof();
+        uint256 requestHash =
+            _requestHash(ROOT_B, NULLIFIER_A, recipient, relayer, FEE, AMOUNT);
+
+        vm.prank(escrow);
+        vm.expectRevert(PrivatePayroll.InvalidProof.selector);
+        payroll.reserveZeroFeeWithdrawal(proof, ROOT_B, NULLIFIER_A, requestHash, AUTH_A);
+    }
+
+    function test_VerifyWithdrawalView() public {
+        vm.prank(escrow);
+        payroll.registerRoot(ROOT_A, BATCH_A, 3, 10_000e6);
+
+        uint256[8] memory proof = _dummyProof();
+        uint256 requestHash =
+            _requestHash(ROOT_A, NULLIFIER_A, recipient, relayer, FEE, AMOUNT);
+        bool valid = payroll.verifyWithdrawal(proof, ROOT_A, NULLIFIER_A, requestHash);
         assertTrue(valid);
 
-        // Wrong recipient should return false
-        valid = payroll.verifyClaim(payrollId, 0, bob, ALICE_SALARY, ALICE_SALT);
-        assertFalse(valid);
-
-        // Wrong amount should return false
-        valid = payroll.verifyClaim(payrollId, 0, alice, ALICE_SALARY + 1, ALICE_SALT);
-        assertFalse(valid);
-
-        // Wrong salt should return false
-        valid = payroll.verifyClaim(payrollId, 0, alice, ALICE_SALARY, ALICE_SALT + 1);
-        assertFalse(valid);
-    }
-
-    function test_MarkClaimedZeroFee() public {
-        uint256 payrollId = _createTestPayroll();
-
-        // Escrow (backend) marks claim after doing EIP-3009 transfer
         vm.prank(escrow);
-        payroll.markClaimedZeroFee(payrollId, 0, alice, ALICE_SALARY, ALICE_SALT);
+        payroll.reserveZeroFeeWithdrawal(proof, ROOT_A, NULLIFIER_A, requestHash, AUTH_A);
 
-        // Should be marked as claimed
-        assertTrue(payroll.isClaimed(payrollId, 0));
-
-        // Should not be claimable again
-        vm.prank(alice);
-        vm.expectRevert(PrivatePayroll.AlreadyClaimed.selector);
-        payroll.claimPayment(payrollId, 0, ALICE_SALARY, ALICE_SALT);
-    }
-
-    function test_RevertMarkClaimedZeroFeeNotEscrow() public {
-        uint256 payrollId = _createTestPayroll();
-
-        // Non-escrow cannot call markClaimedZeroFee
-        vm.prank(alice);
-        vm.expectRevert(PrivatePayroll.Unauthorized.selector);
-        payroll.markClaimedZeroFee(payrollId, 0, alice, ALICE_SALARY, ALICE_SALT);
-    }
-
-    function test_ZeroFeeAndDirectClaimsMixed() public {
-        uint256 payrollId = _createTestPayroll();
-
-        // Alice uses zero-fee (backend marks)
-        vm.prank(escrow);
-        payroll.markClaimedZeroFee(payrollId, 0, alice, ALICE_SALARY, ALICE_SALT);
-
-        // Bob uses direct (fallback)
-        vm.prank(bob);
-        payroll.claimPayment(payrollId, 1, BOB_SALARY, BOB_SALT);
-
-        // Both should be claimed
-        assertTrue(payroll.isClaimed(payrollId, 0));
-        assertTrue(payroll.isClaimed(payrollId, 1));
-
-        // Bob should have received funds from escrow
-        assertEq(usdt.balanceOf(bob), BOB_SALARY);
+        valid = payroll.verifyWithdrawal(proof, ROOT_A, NULLIFIER_A, requestHash);
+        assertFalse(valid);
     }
 }

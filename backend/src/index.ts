@@ -6,9 +6,9 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import claim from "./routes/claim";
-import proof from "./routes/proof";
+import claim, { resumePendingClaims } from "./routes/claim";
 import payroll from "./routes/payroll";
+import { initDatabase } from "./lib/db";
 
 const app = new Hono();
 
@@ -41,7 +41,6 @@ app.get("/health", (c) => {
 
 // API routes
 app.route("/api/claim", claim);
-app.route("/api/proof", proof);
 app.route("/api/payroll", payroll);
 
 // 404 handler
@@ -61,8 +60,24 @@ console.log(`Private Payroll Backend starting on port ${port}...`);
 
 // Use @hono/node-server for Node.js runtime
 import { serve } from "@hono/node-server";
-serve({
-  fetch: app.fetch,
-  port,
-});
-console.log(`Started server: http://localhost:${port}`);
+
+initDatabase()
+  .then(() => {
+    console.log("Database initialized");
+    resumePendingClaims()
+      .then(() => {
+        console.log("Pending claims reconciliation started");
+      })
+      .catch((err) => {
+        console.error("Failed to resume pending claims:", err);
+      });
+    serve({
+      fetch: app.fetch,
+      port,
+    });
+    console.log(`Started server: http://localhost:${port}`);
+  })
+  .catch((err) => {
+    console.error("Failed to initialize database:", err);
+    process.exit(1);
+  });

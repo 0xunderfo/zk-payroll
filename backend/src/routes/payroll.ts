@@ -1,33 +1,31 @@
 /**
- * Payroll API Routes
- * Handles gasless payroll creation via Plasma relayer + EIP-3009
+ * Payroll API Routes (Pool V1)
+ * Handles gasless payroll funding + root registration + claim token issuance.
  */
 
+import { randomBytes } from "crypto";
 import { Hono } from "hono";
 import type { Address, Hex } from "viem";
-import { createPayrollRelayed } from "../lib/contract";
 import { getEscrowAddress } from "../lib/escrow";
 import { submitZeroFeeTransfer, waitForConfirmation } from "../lib/relayer";
 import type { EIP3009Authorization } from "../lib/escrow";
+import {
+  registerRootOnChain,
+  waitForReceipt,
+} from "../lib/contract";
+import { createClaimToken } from "../lib/claimToken";
+import { computeMerkleProof, computeMerkleRoot } from "../lib/merkle";
+import { generateRandomFieldElement, poseidonHash } from "../lib/poseidon";
+import { query, withAdvisoryLock, withTransaction } from "../lib/db";
 
 const payroll = new Hono();
-
-// Types for API
-interface ClaimCredential {
-  commitmentIndex: number;
-  recipient: string;
-  amount: string;
-  salt: string;
-  commitment: string;
-}
+const MERKLE_DEPTH = Number(process.env.MERKLE_DEPTH || "20");
+const PAYROLL_CREATE_LOCK_KEY = 73001;
 
 interface CreatePayrollRequest {
   recipients: Address[];
-  amounts: string[];
+  amounts: string[]; // raw token units
   totalAmount: string;
-  proof: string[];
-  commitments: string[];
-  claimCredentials: ClaimCredential[];
   employer: Address;
   authorization: {
     from: Address;
@@ -40,9 +38,20 @@ interface CreatePayrollRequest {
   signature: Hex;
 }
 
-/**
- * Get client IP from request headers
- */
+interface GeneratedNote {
+  recipient: Address;
+  amount: bigint;
+  secret: bigint;
+  nullifier: bigint;
+  nullifierHash: bigint;
+  commitment: bigint;
+  leafIndex: number;
+  pathElements: bigint[];
+  pathIndices: number[];
+  claimTokenId: string;
+  claimToken: string;
+}
+
 function getClientIp(c: { req: { header: (name: string) => string | undefined } }): string {
   return (
     c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -51,87 +60,116 @@ function getClientIp(c: { req: { header: (name: string) => string | undefined } 
   );
 }
 
-/**
- * Build claim URLs for frontend display
- */
-function buildClaimUrls(
-  payrollId: number,
-  claimCredentials: ClaimCredential[],
-  baseUrl: string
-): Array<ClaimCredential & { claimUrl: string }> {
-  return claimCredentials.map((cred) => {
-    const params = new URLSearchParams({
-      payrollId: payrollId.toString(),
-      commitmentIndex: cred.commitmentIndex.toString(),
-      recipient: cred.recipient,
-      amount: cred.amount,
-      salt: cred.salt,
+function makeBytes32FromRandom(): Hex {
+  return `0x${randomBytes(32).toString("hex")}`;
+}
+
+function makeClaimTokenId(): string {
+  return `ctid_${Date.now()}_${randomBytes(10).toString("hex")}`;
+}
+
+async function loadExistingCommitments(): Promise<bigint[]> {
+  const result = await query<{ commitment: string }>(
+    "SELECT commitment FROM notes ORDER BY leaf_index ASC"
+  );
+  return result.rows.map((r) => BigInt(r.commitment));
+}
+
+async function buildNotes(
+  recipients: Address[],
+  amounts: string[],
+  existingCommitments: bigint[]
+): Promise<GeneratedNote[]> {
+  const notes: Omit<GeneratedNote, "pathElements" | "pathIndices">[] = [];
+  const newCommitments: bigint[] = [];
+
+  for (let i = 0; i < recipients.length; i++) {
+    const recipient = recipients[i].toLowerCase() as Address;
+    const amount = BigInt(amounts[i]);
+    const secret = generateRandomFieldElement();
+    const nullifier = generateRandomFieldElement();
+    const nullifierHash = await poseidonHash([nullifier]);
+    const commitment = await poseidonHash([amount, secret, nullifier]);
+    const leafIndex = existingCommitments.length + i;
+    const claimTokenId = makeClaimTokenId();
+    const claimToken = createClaimToken({ claimTokenId, recipient });
+
+    notes.push({
+      recipient,
+      amount,
+      secret,
+      nullifier,
+      nullifierHash,
+      commitment,
+      leafIndex,
+      claimTokenId,
+      claimToken,
     });
-    return {
-      ...cred,
-      claimUrl: `${baseUrl}/claim?${params.toString()}`,
-    };
-  });
+    newCommitments.push(commitment);
+  }
+
+  const fullLeaves = [...existingCommitments, ...newCommitments];
+  const withPaths: GeneratedNote[] = [];
+
+  for (const note of notes) {
+    const proof = await computeMerkleProof(fullLeaves, MERKLE_DEPTH, note.leafIndex);
+    withPaths.push({
+      ...note,
+      pathElements: proof.pathElements,
+      pathIndices: proof.pathIndices,
+    });
+  }
+
+  return withPaths;
 }
 
 /**
  * GET /api/payroll/escrow
- * Returns the escrow address for frontend to build EIP-3009 authorization
  */
 payroll.get("/escrow", (c) => {
   try {
-    const escrowAddress = getEscrowAddress();
-    return c.json({ address: escrowAddress });
+    return c.json({ address: getEscrowAddress() });
   } catch (error) {
-    console.error("Get escrow error:", error);
+    console.error("[payroll/escrow] error:", error);
     return c.json({ error: "Failed to get escrow address" }, 500);
   }
 });
 
 /**
  * POST /api/payroll/create
- * Create payroll via gasless flow:
- * 1. Submit employer's EIP-3009 signature to Plasma relayer (USDT -> escrow)
- * 2. Wait for USDT transfer confirmation
- * 3. Call createPayrollRelayed() as escrow
- * 4. Return payrollId and claim URLs
+ *
+ * Flow:
+ * 1. Use employer's EIP-3009 signature (employer -> escrow)
+ * 2. Wait transfer confirmation
+ * 3. Generate notes and global merkle root off-chain
+ * 4. Register root on-chain
+ * 5. Persist batch + notes to Postgres
+ * 6. Return claim tokens and links
  */
 payroll.post("/create", async (c) => {
   try {
     const body = await c.req.json() as CreatePayrollRequest;
-    const {
-      recipients,
-      amounts,
-      totalAmount,
-      proof,
-      commitments,
-      claimCredentials,
-      employer,
-      authorization,
-      signature,
-    } = body;
+    const { recipients, amounts, totalAmount, employer, authorization, signature } = body;
 
-    // Validate inputs
-    if (!recipients?.length || !amounts?.length || !totalAmount || !proof?.length || !commitments?.length) {
-      return c.json({ error: "Missing required payroll data" }, 400);
+    if (!recipients?.length || !amounts?.length || recipients.length !== amounts.length) {
+      return c.json({ error: "Recipients and amounts are required and must match in length" }, 400);
     }
-    if (!employer || !authorization || !signature) {
-      return c.json({ error: "Missing authorization data" }, 400);
+    if (!totalAmount || !authorization || !signature || !employer) {
+      return c.json({ error: "Missing required authorization or payroll fields" }, 400);
     }
 
     const escrowAddress = getEscrowAddress();
-
-    // Validate authorization.to === escrowAddress
-    if (authorization.to.toLowerCase() !== escrowAddress.toLowerCase()) {
-      return c.json({ error: "Authorization must be to escrow address" }, 400);
+    if (authorization.from.toLowerCase() !== employer.toLowerCase()) {
+      return c.json({ error: "Authorization signer must match employer" }, 400);
     }
-
-    // Validate authorization.value matches totalAmount
+    if (authorization.to.toLowerCase() !== escrowAddress.toLowerCase()) {
+      return c.json({ error: "Authorization must target escrow address" }, 400);
+    }
     if (authorization.value !== totalAmount) {
       return c.json({ error: "Authorization value must match totalAmount" }, 400);
     }
 
-    // Convert authorization to EIP3009Authorization format
+    const userIp = getClientIp(c);
     const eip3009Auth: EIP3009Authorization = {
       from: authorization.from,
       to: authorization.to,
@@ -141,59 +179,120 @@ payroll.post("/create", async (c) => {
       nonce: authorization.nonce,
     };
 
-    // Step 1: Submit EIP-3009 to Plasma relayer
-    console.log("[payroll/create] Submitting EIP-3009 to Plasma relayer...");
-    const userIp = getClientIp(c);
+    console.log("[payroll/create] Submitting employer funding to relayer...");
     const relayerResult = await submitZeroFeeTransfer(userIp, eip3009Auth, signature);
-    console.log("[payroll/create] Relayer submitted:", relayerResult.authorizationId);
 
-    // Step 2: Wait for USDT transfer confirmation
-    console.log("[payroll/create] Waiting for transfer confirmation...");
+    console.log("[payroll/create] Waiting for employer funding confirmation...");
     const transferResult = await waitForConfirmation(userIp, relayerResult.authorizationId);
-
     if (transferResult.status !== "confirmed") {
-      console.error("[payroll/create] Transfer failed:", transferResult.error);
       return c.json({
-        error: "USDT transfer failed",
-        details: transferResult.error
+        error: "Employer funding transfer failed",
+        details: transferResult.error || "Unknown relayer failure",
       }, 400);
     }
-    console.log("[payroll/create] Transfer confirmed:", transferResult.txHash);
 
-    // Step 3: Call createPayrollRelayed as escrow
-    console.log("[payroll/create] Creating payroll on contract...");
-
-    // Pad recipients to 5
-    const paddedRecipients = [...recipients] as Address[];
-    while (paddedRecipients.length < 5) {
-      paddedRecipients.push("0x0000000000000000000000000000000000000000" as Address);
+    const recipientAmounts = amounts.map((a) => BigInt(a));
+    const sum = recipientAmounts.reduce((acc, v) => acc + v, 0n);
+    if (sum !== BigInt(totalAmount)) {
+      return c.json({ error: "Total amount does not match recipient sum" }, 400);
     }
 
-    const { txHash, payrollId } = await createPayrollRelayed(
-      employer,
-      proof.map((p) => BigInt(p)),
-      BigInt(totalAmount),
-      commitments.map((c) => BigInt(c)),
-      paddedRecipients
-    );
-    console.log("[payroll/create] Payroll created:", payrollId, "tx:", txHash);
+    const { notes, finalRoot, batchId, registerTxHash } = await withAdvisoryLock(
+      PAYROLL_CREATE_LOCK_KEY,
+      async () => {
+        const existingCommitments = await loadExistingCommitments();
+        const notes = await buildNotes(recipients, amounts, existingCommitments);
+        const finalRoot = await computeMerkleRoot(
+          [...existingCommitments, ...notes.map((n) => n.commitment)],
+          MERKLE_DEPTH
+        );
 
-    // Step 4: Build claim URLs
+        const batchId = makeBytes32FromRandom();
+        console.log("[payroll/create] Registering root on-chain...");
+        const registerTxHash = await registerRootOnChain(
+          finalRoot,
+          batchId,
+          notes.length,
+          BigInt(totalAmount)
+        );
+        await waitForReceipt(registerTxHash);
+
+        await withTransaction(async (tx) => {
+          await tx.query(
+            `
+              INSERT INTO batches (
+                batch_id, employer_address, total_amount, note_count, root,
+                cumulative_leaf_count, funding_authorization_id, funding_tx_hash, register_tx_hash, status
+              )
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'registered')
+            `,
+            [
+              batchId,
+              employer.toLowerCase(),
+              totalAmount,
+              notes.length,
+              finalRoot.toString(),
+              existingCommitments.length + notes.length,
+              relayerResult.authorizationId,
+              transferResult.txHash || null,
+              registerTxHash,
+            ]
+          );
+
+          for (const note of notes) {
+            await tx.query(
+              `
+                INSERT INTO notes (
+                  batch_id, recipient, amount, secret, nullifier, nullifier_hash, commitment,
+                  leaf_index, root, path_elements, path_indices, claim_token_id, spent
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12, false)
+              `,
+              [
+                batchId,
+                note.recipient,
+                note.amount.toString(),
+                note.secret.toString(),
+                note.nullifier.toString(),
+                note.nullifierHash.toString(),
+                note.commitment.toString(),
+                note.leafIndex,
+                finalRoot.toString(),
+                JSON.stringify(note.pathElements.map((x) => x.toString())),
+                JSON.stringify(note.pathIndices.map((x) => x.toString())),
+                note.claimTokenId,
+              ]
+            );
+          }
+        });
+
+        return { notes, finalRoot, batchId, registerTxHash };
+      }
+    );
+
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const credentialsWithUrls = buildClaimUrls(Number(payrollId), claimCredentials, frontendUrl);
+    const claimCredentials = notes.map((note) => ({
+      recipient: note.recipient,
+      amount: note.amount.toString(),
+      commitment: note.commitment.toString(),
+      nullifierHash: note.nullifierHash.toString(),
+      claimToken: note.claimToken,
+      claimUrl: `${frontendUrl}/claim?ct=${encodeURIComponent(note.claimToken)}`,
+    }));
 
     return c.json({
       success: true,
-      payrollId: Number(payrollId),
-      txHash,
+      batchId,
+      root: finalRoot.toString(),
+      txHash: registerTxHash,
       transferTxHash: transferResult.txHash,
-      claimCredentials: credentialsWithUrls,
+      claimCredentials,
     });
   } catch (error) {
-    console.error("[payroll/create] Error:", error);
+    console.error("[payroll/create] error:", error);
     return c.json({
       error: "Payroll creation failed",
-      details: String(error)
+      details: String(error),
     }, 500);
   }
 });

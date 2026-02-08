@@ -5,18 +5,20 @@ import type { ClaimCredential } from "../lib/types";
 
 interface ClaimCredentialsProps {
   credentials: ClaimCredential[];
-  payrollId: number;
 }
 
-export function ClaimCredentials({ credentials, payrollId }: ClaimCredentialsProps) {
+export function ClaimCredentials({ credentials }: ClaimCredentialsProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const buildClaimUrl = (cred: ClaimCredential) => {
+    if (cred.claimUrl) return cred.claimUrl;
+    if (cred.claimToken) {
+      const params = new URLSearchParams({ ct: cred.claimToken });
+      return `${window.location.origin}/claim?${params.toString()}`;
+    }
     const params = new URLSearchParams({
-      pid: payrollId.toString(),
-      idx: cred.commitmentIndex.toString(),
       amt: cred.amount,
-      salt: cred.salt,
+      c: cred.commitment,
     });
     return `${window.location.origin}/claim?${params.toString()}`;
   };

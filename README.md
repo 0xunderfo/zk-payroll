@@ -10,7 +10,9 @@ Confidential stablecoin payroll using zero-knowledge proofs on Plasma.
 
 ## Overview
 
-Private Payroll enables organizations to pay their team in stablecoins (USDT) while keeping individual payment amounts private. Only the total payroll amount is visible on-chain — individual salaries are hidden behind Poseidon hash commitments and verified with Groth16 proofs.
+Private Payroll enables organizations to pay their team in stablecoins (USDT) while keeping individual payment amounts private. Only the total payroll amount and a Merkle Root are visible on-chain. Individual salaries are shielded notes, verifiable only by the recipient using local ZK proofs.
+
+**Status:** V1 (Pooled Notes). See [`docs/pool-v1-spec.md`](./docs/pool-v1-spec.md) for the authoritative spec.
 
 ## Problem
 
@@ -23,17 +25,17 @@ This transparency creates real problems: salary negotiations become awkward when
 
 ## Solution
 
-1. **Total payroll is verifiable** — The sum of all payments is public and proven correct
-2. **Individual amounts are hidden** — Each payment is a Poseidon commitment: `hash(recipient, amount, salt)`
-3. **Zero-knowledge proof** — Groth16 proof verifies amounts sum to total without revealing them
-4. **Zero-fee claims** — Recipients claim via Plasma's gasless USDT transfers
+1. **Shielded Pool** — Employer deposits total amount and registers a Merkle Root of private notes.
+2. **Zero-Knowledge Withdrawals** — Backend generates withdrawal proofs per note claim.
+3. **On-Chain Privacy** — The contract never sees recipient addresses or amounts, only the validity of the proof.
+4. **Zero-Fee Claims** — Recipients claim via Plasma's gasless USDT transfers.
 
 ### How It Works
 
-1. **Employer creates payroll** — Enters addresses and amounts, backend generates ZK proof via snarkjs
-2. **Proof verified on-chain** — Contract checks Groth16 proof, stores commitments, escrows USDT
-3. **Recipients claim** — Each recipient gets a claim link with their secret salt, claims via zero-fee relayer
-4. **Privacy preserved** — Individual amounts never appear on-chain (only at claim time per-recipient)
+1. **Employer creates batch** — Signs a payload with recipients and amounts. Backend generates a Merkle Tree.
+2. **Root Verification** — Contract registers the Merkle Root and holds total funds.
+3. **Recipients claim** — Recipient submits claim token; backend generates the ZK withdrawal proof and relays zero-fee transfer.
+4. **Privacy preserved** — The blockchain sees a "spend" of a nullifier, but cannot link it to a specific note or amount in the tree.
 
 ## Architecture
 
@@ -42,9 +44,9 @@ This transparency creates real problems: salary negotiations become awkward when
 │                      FRONTEND (Next.js)                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
 │  │ Create Flow  │  │ Claim Flow   │  │ API Client           │   │
-│  │ - Recipients │  │ - Claim link │  │ - Backend calls      │   │
-│  │ - Amounts    │  │ - Zero-fee   │  │ - Proof requests     │   │
-│  │ - EIP-3009   │  │ - Direct     │  │ - Claim polling      │   │
+│  │ - Batch Sign │  │ - Generate   │  │ - Backend calls      │   │
+│  │ - EIP-712    │  │   Proof      │  │ - Status polling     │   │
+│  │              │  │ - WASM Prove │  │                      │   │
 │  └──────────────┘  └──────────────┘  └──────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -52,10 +54,10 @@ This transparency creates real problems: salary negotiations become awkward when
 ┌─────────────────────────────────────────────────────────────────┐
 │                      BACKEND (Hono)                             │
 │  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐   │
-│  │ /api/proof       │  │ /api/claim   │  │ /api/payroll     │   │
-│  │ - snarkjs        │  │ - verify     │  │ - escrow addr    │   │
-│  │ - Groth16        │  │ - zero-fee   │  │ - gasless create │   │
-│  │ - Poseidon       │  │ - status     │  │ - EIP-3009 relay │   │
+│  │ /api/batch       │  │ /api/claim   │  │ /api/relayer     │   │
+│  │ - Tree Build     │  │ - Reserve    │  │ - Plasma Relay   │   │
+│  │ - Persistence    │  │ - Finalize   │  │ - Zero-Fee       │   │
+│  │ - Root Reg       │  │ - Queue      │  │                  │   │
 │  └──────────────────┘  └──────────────┘  └──────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -64,9 +66,9 @@ This transparency creates real problems: salary negotiations become awkward when
 │                    SMART CONTRACTS (Plasma)                     │
 │  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐   │
 │  │ PrivatePayroll   │  │ Groth16      │  │ PoseidonT4       │   │
-│  │ - createPayroll  │  │ Verifier     │  │ - On-chain hash  │   │
-│  │ - claimPayment   │  │ - BN254      │  │ - Commitment     │   │
-│  │ - markClaimed    │  │              │  │   verification   │   │
+│  │ - registerRoot   │  │ Verifier     │  │ - On-chain hash  │   │
+│  │ - reserveWidth   │  │ - BN254      │  │                  │   │
+│  │ - finalizeWith   │  │              │  │                  │   │
 │  └──────────────────┘  └──────────────┘  └──────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -76,11 +78,11 @@ This transparency creates real problems: salary negotiations become awkward when
 | Component | Technology |
 |-----------|------------|
 | Chain | Plasma (EVM, zero-fee USDT) |
-| Circuits | Circom 2.x + Groth16 |
+| Circuits | Circom 2.x + Groth16 (Merkle Membership + Nullifier) |
 | Hashing | Poseidon T4 |
 | Contracts | Solidity 0.8.24 + Foundry |
 | Frontend | Next.js 14 + wagmi + viem + RainbowKit |
-| Backend | Hono + snarkjs + viem (proof gen + relayer) |
+| Backend | Hono + snarkjs + viem + relayer + db |
 
 ## Quick Start
 
@@ -119,7 +121,7 @@ cast send --rpc-url http://127.0.0.1:8545 \
 cd frontend && bun dev
 # Open http://localhost:3000
 
-# 6. Start backend (required for proof generation + zero-fee claims)
+# 6. Start backend (required for tree management + zero-fee claims)
 cd backend && bun run dev
 # Runs on http://localhost:3001
 ```
@@ -130,6 +132,7 @@ cd backend && bun run dev
 # Set environment variables
 export PRIVATE_KEY="your_private_key"
 export ESCROW_ADDRESS="your_escrow_wallet"
+export DEPLOY_WITHDRAW_VERIFIER=true
 
 # Deploy to Plasma testnet
 cd contracts
@@ -138,6 +141,23 @@ forge script script/DeployTestnet.s.sol --tc DeployTestnetScript \
 
 # Update frontend/.env.local with deployed addresses
 ```
+
+If you want to reuse an existing verifier instead of deploying a new one:
+
+```bash
+export DEPLOY_WITHDRAW_VERIFIER=false
+export WITHDRAW_VERIFIER_ADDRESS="0x..."
+```
+
+### Railway Postgres Setup
+
+Use Railway private-network database URL in backend service env:
+
+```bash
+DATABASE_URL=${{ Postgres.DATABASE_URL }}
+```
+
+Migrations run automatically on backend startup via `schema_migrations`.
 
 ## Demo
 
@@ -152,15 +172,16 @@ Live frontend: https://pvt-payroll.vercel.app
 
 | Contract | Address |
 |----------|---------|
-| PrivatePayroll | `0x924C2eb2A8Abd7A8afce79b80191da4076Bc0b47` |
-| Groth16 Verifier | `0x8Be848B25d4A92ca20DBd77B1c28b5e075b8Bd5a` |
-| PoseidonT4 | `0x5F4E76C5b8c6B61419BD2814b951e6C7B5Cbc573` |
+| PrivatePayroll | `0x058a14e29824a11343663c22974D47f0c6188649` |
+| Groth16 Verifier | `0x778b99c9Ecf72ADBa1A9A6997b0d7C7b8551cB0D` |
+| PoseidonT4 | `0xe824F3FEE3748027F7E75cCEF76711858826C539` |
 | USDT0 | `0x502012b361AebCE43b26Ec812B74D9a51dB4D412` |
 
 ## Documentation
 
-- [Idea & Implementation](./docs/idea-implementation.md) — Problem, solution, market, and implementation details
-- [Architecture Deep-Dive](./docs/architecture.md) — Circuit design, contract model, security properties
+- [Pool V1 Spec](./docs/pool-v1-spec.md) — **Authoritative Spec** for the pooled architecture.
+- [Idea & Implementation](./docs/idea-implementation.md) — Problem, solution, market, and implementation details.
+- [Architecture Deep-Dive](./docs/architecture.md) — Circuit design, contract model, security properties.
 
 ## Team
 

@@ -3,13 +3,12 @@
 import { Suspense, useEffect } from "react";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useAccount, useWriteContract, useChainId } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 import { WalletButton } from "../../components/WalletButton";
 import { ClaimForm } from "../../components/ClaimForm";
-import { zkPayrollPrivateAbi } from "../../lib/abi";
-import { contracts } from "../../lib/wagmi";
 import {
   checkBackendHealth,
+  verifyClaim,
   submitZeroFeeClaim,
   waitForClaimConfirmation,
 } from "../../lib/api";
@@ -18,58 +17,46 @@ function ClaimContent() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const searchParams = useSearchParams();
-  const { writeContractAsync } = useWriteContract();
 
   const [status, setStatus] = useState<"idle" | "claiming" | "success" | "error">("idle");
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [claimedAmount, setClaimedAmount] = useState<string | null>(null);
-  const [claimMode, setClaimMode] = useState<"zero-fee" | "direct">("zero-fee");
   const [backendAvailable, setBackendAvailable] = useState<boolean | null>(null);
   const [claimProgress, setClaimProgress] = useState<string | null>(null);
 
-  const payrollAddress = contracts.privatePayroll[chainId as keyof typeof contracts.privatePayroll] || contracts.privatePayroll[31337];
   const explorerUrl = chainId === 9746 ? "https://testnet.plasmascan.to" : null;
 
   const initialData = {
-    payrollId: searchParams.get("pid") || "",
-    commitmentIndex: searchParams.get("idx") || "",
-    amount: searchParams.get("amt") || "",
-    salt: searchParams.get("salt") || "",
+    claimToken: searchParams.get("ct") || "",
   };
 
-  const hasUrlParams = initialData.payrollId && initialData.amount && initialData.salt;
+  const hasUrlParams = !!initialData.claimToken;
 
   // Check backend availability on mount
   useEffect(() => {
     checkBackendHealth().then((available) => {
       setBackendAvailable(available);
-      if (!available) {
-        setClaimMode("direct");
-      }
     });
   }, []);
 
-  const handleZeroFeeClaim = async (data: {
-    payrollId: bigint;
-    commitmentIndex: bigint;
-    amount: bigint;
-    salt: bigint;
-  }) => {
+  const handleZeroFeeClaim = async (data: { claimToken: string }) => {
     if (!address) return;
     setStatus("claiming");
     setErrorMsg(null);
     setClaimProgress("Submitting zero-fee claim...");
 
     try {
-      // Submit to backend
-      const result = await submitZeroFeeClaim(
-        data.payrollId.toString(),
-        data.commitmentIndex.toString(),
-        address,
-        data.amount.toString(),
-        data.salt.toString()
-      );
+      if (!data.claimToken) {
+        throw new Error("Pool-v1 claims require a claim token link.");
+      }
+
+      const verification = await verifyClaim(data.claimToken, address);
+      if (!verification.valid) {
+        throw new Error(verification.error || "Invalid claim token");
+      }
+
+      const result = await submitZeroFeeClaim(data.claimToken, address);
 
       setClaimProgress("Waiting for confirmation...");
 
@@ -78,7 +65,9 @@ function ClaimContent() {
 
       if (finalStatus.status === "confirmed") {
         setTxHash(finalStatus.txHash || null);
-        setClaimedAmount((Number(data.amount) / 1e6).toFixed(2));
+        if (verification.amount) {
+          setClaimedAmount((Number(verification.amount) / 1e6).toFixed(2));
+        }
         setStatus("success");
       } else {
         throw new Error(finalStatus.error || "Claim failed");
@@ -93,46 +82,13 @@ function ClaimContent() {
     }
   };
 
-  const handleDirectClaim = async (data: {
-    payrollId: bigint;
-    commitmentIndex: bigint;
-    amount: bigint;
-    salt: bigint;
-  }) => {
-    if (!address) return;
-    setStatus("claiming");
-    setErrorMsg(null);
-
-    try {
-      const tx = await writeContractAsync({
-        address: payrollAddress as `0x${string}`,
-        abi: zkPayrollPrivateAbi,
-        functionName: "claimPayment",
-        args: [data.payrollId, data.commitmentIndex, data.amount, data.salt],
-      });
-
-      setTxHash(tx);
-      setClaimedAmount((Number(data.amount) / 1e6).toFixed(2));
-      setStatus("success");
-    } catch (e: any) {
-      console.error("Direct claim error:", e);
-      const msg = e?.shortMessage || e?.message || "Claim failed";
-      setErrorMsg(msg);
+  const handleClaim = async (data: { claimToken: string }) => {
+    if (!backendAvailable) {
+      setErrorMsg("Backend unavailable. Pool-v1 claims require backend proof generation.");
       setStatus("error");
+      return;
     }
-  };
-
-  const handleClaim = async (data: {
-    payrollId: bigint;
-    commitmentIndex: bigint;
-    amount: bigint;
-    salt: bigint;
-  }) => {
-    if (claimMode === "zero-fee" && backendAvailable) {
-      await handleZeroFeeClaim(data);
-    } else {
-      await handleDirectClaim(data);
-    }
+    await handleZeroFeeClaim(data);
   };
 
   return (
@@ -157,7 +113,13 @@ function ClaimContent() {
           </div>
           <h3 className="text-2xl font-bold font-display text-zk-accent mb-2">Payment Claimed</h3>
           <p className="text-zk-muted text-lg mb-4">
-            You received <span className="text-zk-text font-bold font-display tabular-nums">{claimedAmount} USDT</span>
+            {claimedAmount ? (
+              <>
+                You received <span className="text-zk-text font-bold font-display tabular-nums">{claimedAmount} USDT</span>
+              </>
+            ) : (
+              <>Your payment was successfully delivered.</>
+            )}
           </p>
           {txHash && (
             <p className="text-zk-dim text-sm font-display">
@@ -196,47 +158,17 @@ function ClaimContent() {
             </div>
           )}
 
-          {/* Claim Mode Toggle */}
           <div className="bg-zk-surface rounded-xl p-4 border border-white/[0.06]">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between">
               <span className="text-zk-dim text-xs uppercase tracking-wider font-display">Claim Method</span>
-              {backendAvailable === null && (
-                <span className="text-zk-dim text-xs">Checking...</span>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => backendAvailable && setClaimMode("zero-fee")}
-                disabled={!backendAvailable}
-                className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
-                  claimMode === "zero-fee" && backendAvailable
-                    ? "bg-zk-accent text-zk-bg"
-                    : backendAvailable
-                    ? "bg-zk-card text-zk-muted hover:text-zk-text border border-white/[0.06]"
-                    : "bg-zk-inset text-zk-dim cursor-not-allowed border border-white/[0.04]"
-                }`}
-              >
-                Zero-Fee (Gasless)
-              </button>
-              <button
-                onClick={() => setClaimMode("direct")}
-                className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
-                  claimMode === "direct"
-                    ? "bg-zk-accent text-zk-bg"
-                    : "bg-zk-card text-zk-muted hover:text-zk-text border border-white/[0.06]"
-                }`}
-              >
-                Direct (Pay Gas)
-              </button>
+              {backendAvailable === null && <span className="text-zk-dim text-xs">Checking...</span>}
             </div>
             <p className="text-zk-dim text-xs mt-2">
-              {claimMode === "zero-fee"
-                ? "Claim via Plasma relayer — no gas fees required"
-                : "Claim directly on-chain — you pay the gas fee"}
+              Pool-v1 claims are processed via backend proof generation and Plasma zero-fee relay.
             </p>
             {!backendAvailable && backendAvailable !== null && (
               <p className="text-amber-400 text-xs mt-1">
-                Zero-fee backend unavailable. Using direct claim.
+                Backend unavailable. Claiming is temporarily disabled.
               </p>
             )}
           </div>
@@ -278,8 +210,8 @@ function ClaimContent() {
             <p className="font-medium text-zk-muted mb-2 font-display text-xs uppercase tracking-wider">How claiming works</p>
             <ul className="space-y-1 text-zk-muted">
               <li>1. Your wallet address must match the one registered in the payroll</li>
-              <li>2. The contract verifies Poseidon(your_address, amount, salt) matches the stored commitment</li>
-              <li>3. On success, USDT is transferred directly to your wallet</li>
+              <li>2. Backend generates a zero-knowledge withdrawal proof for your note</li>
+              <li>3. On success, USDT is relayed to your wallet with zero fees</li>
             </ul>
           </div>
         </div>

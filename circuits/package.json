@@ -4,12 +4,16 @@
   "description": "Circom circuits for Private Payroll",
   "private": true,
   "scripts": {
-    "compile": "circom payroll.circom --r1cs --wasm --sym -o build/",
-    "setup": "bun run scripts/setup.js",
-    "prove": "bun run scripts/prove.js",
-    "verify": "bun run scripts/verify.js",
-    "export-verifier": "snarkjs zkey export solidityverifier build/circuit_final.zkey ../contracts/src/Verifier.sol",
-    "test": "bun run scripts/test.js"
+    "compile": "circom withdraw_requesthash.circom --r1cs --wasm --sym -o build/",
+    "setup": "node scripts/setup_withdraw.js",
+    "compile:withdraw": "circom withdraw_requesthash.circom --r1cs --wasm --sym -o build/",
+    "setup:withdraw": "node scripts/setup_withdraw.js",
+    "input:withdraw": "node scripts/generate_withdraw_input.js",
+    "verify": "node scripts/verify.js",
+    "export-withdraw-verifier": "snarkjs zkey export solidityverifier build/withdraw_final.zkey ../contracts/src/WithdrawVerifier.sol",
+    "compile:legacy": "circom payroll_private.circom --r1cs --wasm --sym -o build/",
+    "setup:legacy": "bun run scripts/setup.js",
+    "test:legacy": "node scripts/e2e_test.js"
   },
   "dependencies": {
     "circomlib": "^2.0.5",

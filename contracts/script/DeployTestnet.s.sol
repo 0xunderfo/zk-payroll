@@ -3,15 +3,20 @@ pragma solidity ^0.8.24;
 
 import {Script, console2} from "forge-std/Script.sol";
 import {PrivatePayroll} from "../src/PrivatePayroll.sol";
-import {Groth16Verifier} from "../src/Verifier.sol";
+import {Groth16Verifier as WithdrawVerifier} from "../src/WithdrawVerifier.sol";
 
 /**
  * @title DeployTestnet
  * @notice Deployment script for Plasma testnet using existing USDT0
  *
  * Usage:
- *   ESCROW_ADDRESS=0x... forge script script/DeployTestnet.s.sol --tc DeployTestnetScript \
+ *   ESCROW_ADDRESS=0x... \
+ *   forge script script/DeployTestnet.s.sol --tc DeployTestnetScript \
  *     --rpc-url https://testnet-rpc.plasma.to --broadcast --private-key $PRIVATE_KEY
+ *
+ * Optional:
+ *   DEPLOY_WITHDRAW_VERIFIER=false WITHDRAW_VERIFIER_ADDRESS=0x...
+ *   (reuse existing verifier instead of deploying a fresh one)
  */
 contract DeployTestnetScript is Script {
     // Plasma testnet USDT0
@@ -22,6 +27,8 @@ contract DeployTestnetScript is Script {
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address escrowAddress = vm.envAddress("ESCROW_ADDRESS");
+        bool deployWithdrawVerifier = vm.envOr("DEPLOY_WITHDRAW_VERIFIER", true);
+        address withdrawVerifierAddress = vm.envOr("WITHDRAW_VERIFIER_ADDRESS", address(0));
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -34,17 +41,23 @@ contract DeployTestnetScript is Script {
         require(poseidonAddr != address(0), "Poseidon deployment failed");
         console2.log("PoseidonT4 deployed at:", poseidonAddr);
 
-        // 2. Deploy Groth16 Verifier
-        Groth16Verifier verifier = new Groth16Verifier();
-        console2.log("Verifier deployed at:", address(verifier));
+        // 2. Deploy or reuse withdrawal verifier (3 public signals)
+        if (deployWithdrawVerifier || withdrawVerifierAddress == address(0)) {
+            WithdrawVerifier verifier = new WithdrawVerifier();
+            withdrawVerifierAddress = address(verifier);
+            console2.log("Withdrawal verifier deployed at:", withdrawVerifierAddress);
+        } else {
+            console2.log("Reusing withdrawal verifier:", withdrawVerifierAddress);
+        }
 
         // 3. Deploy PrivatePayroll with existing USDT0
-        PrivatePayroll payroll = new PrivatePayroll(
-            address(verifier),
-            USDT0,
-            poseidonAddr,
-            escrowAddress
-        );
+        PrivatePayroll payroll =
+            new PrivatePayroll(
+                withdrawVerifierAddress,
+                USDT0,
+                poseidonAddr,
+                escrowAddress
+            );
         console2.log("PrivatePayroll deployed at:", address(payroll));
 
         vm.stopBroadcast();
@@ -54,7 +67,7 @@ contract DeployTestnetScript is Script {
         console2.log("");
         console2.log("Addresses:");
         console2.log("  PrivatePayroll:", address(payroll));
-        console2.log("  Verifier:", address(verifier));
+        console2.log("  Verifier:", withdrawVerifierAddress);
         console2.log("  PoseidonT4:", poseidonAddr);
         console2.log("  USDT0:", USDT0);
         console2.log("  Escrow:", escrowAddress);

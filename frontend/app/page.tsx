@@ -93,7 +93,7 @@ export default function LandingPage() {
               { num: "01", title: "Upload payroll", desc: "Enter recipients and amounts via CSV or the form. Data never leaves your browser." },
               { num: "02", title: "Generate proof", desc: "Groth16 proof generated client-side via snarkjs. Proves amounts sum to the declared total." },
               { num: "03", title: "Deposit & commit", desc: "USDT deposited to escrow. Poseidon hash commitments lock each recipient's payment amount." },
-              { num: "04", title: "Recipients claim", desc: "Each recipient claims with their secret salt. The contract verifies the commitment and releases funds." },
+              { num: "04", title: "Recipients claim", desc: "Each recipient claims using their private claim token. Backend generates the withdrawal proof and relays zero-fee USDT." },
             ].map((step, i) => (
               <div key={i} className="bg-zk-surface border border-white/[0.06] rounded-xl p-5 hover:border-zk-accent/15 hover:shadow-[0_0_30px_rgba(52,211,153,0.04)] transition-all">
                 <div className="font-display text-xs font-bold text-zk-accent mb-3 flex items-center gap-2">

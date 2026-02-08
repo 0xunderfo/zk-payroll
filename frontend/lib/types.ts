@@ -3,10 +3,10 @@
  */
 
 export interface ClaimCredential {
-  payrollId?: number;
-  commitmentIndex: number;
   recipient: string;
   amount: string; // raw units (6 decimals)
-  salt: string;
   commitment: string;
+  claimToken?: string;
+  claimUrl?: string;
+  nullifierHash?: string;
 }

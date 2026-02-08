@@ -2,225 +2,154 @@
 
 ## Overview
 
-Private Payroll enables private payroll for DAOs using zero-knowledge proofs. The system proves that individual payment amounts sum to a declared total without revealing the individual amounts.
+Private Payroll implements a shielded pool architecture. Unlike the previous "slot-based" system, V1 uses a Merkle Tree to store private notes off-chain. The blockchain only knows the Merkle Root and the total amount of funds in the pool. Withdrawals are verified using Zero-Knowledge Proofs of Merkle membership and nullifier uniqueness.
 
 ## Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      FRONTEND (Next.js)                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │ Create Flow  │  │ Claim Flow   │  │ API Client           │  │
-│  │ - Recipients │  │ - Claim link │  │ - Backend calls      │  │
-│  │ - Amounts    │  │ - Zero-fee   │  │ - Proof requests     │  │
-│  │ - EIP-3009   │  │ - Direct     │  │ - Claim polling      │  │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+│                      FRONTEND (Next.js)                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
+│  │ Create Batch │  │ Claim Note   │  │ API Client           │   │
+│  │ - Recip List │  │ - Proof Gen  │  │ - Backend calls      │   │
+│  │ - Sign Pylod │  │ - WASM Prove │  │ - Status polling     │   │
+│  │              │  │ - Zero-fee   │  │                      │   │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      BACKEND (Hono)                              │
-│  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ /api/proof      │  │ /api/claim   │  │ /api/payroll     │  │
-│  │ - snarkjs       │  │ - verify     │  │ - escrow addr    │  │
-│  │ - Groth16       │  │ - zero-fee   │  │ - gasless create │  │
-│  │ - Poseidon      │  │ - status     │  │ - EIP-3009 relay │  │
-│  └──────────────────┘  └──────────────┘  └──────────────────┘  │
+│                      BACKEND (Hono)                             │
+│  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐   │
+│  │ /api/batch       │  │ /api/claim   │  │ /api/relayer     │   │
+│  │ - Tree Build     │  │ - Verify     │  │ - Plasma Relay   │   │
+│  │ - DB Store       │  │ - Reserve    │  │ - Zero-Fee       │   │
+│  │ - Root Reg       │  │ - Finalize   │  │ - TX Monitor     │   │
+│  └──────────────────┘  └──────────────┘  └──────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    SMART CONTRACTS (Plasma)                      │
-│  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ PrivatePayroll │  │ Groth16      │  │ PoseidonT4       │  │
-│  │ - createPayroll  │  │ Verifier     │  │ - On-chain hash  │  │
-│  │ - claimPayment   │  │ - BN254      │  │ - Commitment     │  │
-│  │ - markClaimed    │  │              │  │   verification   │  │
-│  └──────────────────┘  └──────────────┘  └──────────────────┘  │
+│                    SMART CONTRACTS (Plasma)                     │
+│  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐   │
+│  │ PrivatePayroll   │  │ Groth16      │  │ PoseidonT4       │   │
+│  │ - registerRoot   │  │ Verifier     │  │ - On-chain hash  │   │
+│  │ - reserveWidth   │  │ - BN254      │  │                  │   │
+│  │ - finalizeWith   │  │              │  │                  │   │
+│  └──────────────────┘  └──────────────┘  └──────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Circuit: `payroll_private.circom`
+## Circuit: `withdraw_requesthash.circom`
 
 ### Purpose
-Proves that hidden amounts sum to a public total, while binding each amount to a Poseidon commitment.
+Proves that a user owns a note in the Merkle Tree (membership), that the note has not been spent (nullifier), and that the user authorizes a specific withdrawal request (request hash).
 
 ### Signals
 
 ```circom
-// Public inputs (6 total)
-signal input totalAmount;           // Sum that must be proven
-signal input commitments[5];        // Poseidon(recipient, amount, salt)
+// Public inputs (3 total)
+signal input root;              // Merkle Root of the note tree
+signal input nullifierHash;     // Unique identifier for the note (prevents double-spend)
+signal input requestHash;       // Hash of withdrawal parameters (recipient, fee, relayer)
 
 // Private inputs
-signal input recipients[5];         // Recipient addresses (field elements)
-signal input amounts[5];            // Individual payment amounts
-signal input salts[5];              // Random salts for commitments
+signal input secret;            // Note secret
+signal input nullifier;         // Note nullifier secret
+signal input amount;            // Note amount
+signal input pathElements[n];   // Merkle path siblings
+signal input pathIndices[n];    // Merkle path indices
+signal input recipient;         // Destination address
+signal input relayer;           // Relayer address
+signal input fee;               // Relayer fee
 ```
 
 ### Constraints
 
-1. **Sum constraint:** `amounts[0] + amounts[1] + ... + amounts[4] === totalAmount`
-2. **Commitment binding:** For each slot, `Poseidon(recipient, amount, salt) === commitment`
-3. **Unused slots:** Set `amount = 0`, commitment still computed but amount doesn't affect sum
-
-### Circuit Stats
-- Non-linear constraints: 1,320
-- Linear constraints: 1,710
-- Proving system: Groth16
-- Curve: BN254
-- Powers of Tau: `powersOfTau28_hez_final_12.ptau` (supports up to 4,096 constraints)
+1.  **Note Commitment:** `noteCommitment = Poseidon(amount, secret, nullifier)`
+2.  **Merkle Membership:** Verify `noteCommitment` exists in `root` using `pathElements` and `pathIndices`.
+3.  **Nullifier Derivation:** `nullifierHash = Poseidon(nullifier)`
+4.  **Request Hash Validation:**
+    *   Recompute `requestHash = Poseidon(root, nullifierHash, recipient, relayer, fee, amount)` (using canonical structure from spec).
+    *   Request hash binds the proof to a specific transaction context, preventing malleability.
 
 ## Smart Contract: `PrivatePayroll.sol`
 
-### Two-Phase Model
+### Pool Model
 
-**Phase 1: Create Payroll**
+**Step 1: Register Root (Employer/Backend)**
 ```solidity
-function createPayroll(
-    uint256[8] calldata proof,      // Groth16 proof
-    uint256 totalAmount,            // Public: total USDT
-    uint256[5] calldata commitments,// Public: Poseidon hashes
-    address[5] calldata recipients  // Recipients for claim verification
-) external returns (uint256 payrollId)
-```
-- Verifies Groth16 proof on-chain
-- Transfers `totalAmount` USDT to escrow
-- Stores commitments mapped to payroll ID
-- Emits `PayrollCreated` event
-
-**Phase 2: Claim Payment**
-```solidity
-function claimPayment(
-    uint256 payrollId,
-    uint256 commitmentIndex,
-    uint256 amount,
-    uint256 salt
+function registerRoot(
+    uint256 root,
+    uint256 batchId,
+    uint256 noteCount,
+    uint256 totalAmount
 ) external
 ```
-- Computes `Poseidon(msg.sender, amount, salt)` on-chain
-- Verifies computed hash matches stored commitment at index
-- Marks commitment as claimed (prevents double-claim)
-- Transfers `amount` USDT from escrow to `msg.sender`
+*   Stores the Merkle Root.
+*   Emits `RootRegistered`.
+*   Requires `totalAmount` USD to be deposited into the pool.
+
+**Step 2: Reserve Withdrawal (Back/Relayer)**
+```solidity
+function reserveZeroFeeWithdrawal(
+    uint256[8] calldata proof,
+    uint256 root,
+    uint256 nullifierHash,
+    uint256 requestHash,
+    uint256 authorizationId // EIP-3009 auth ID
+) external
+```
+*   Verifies Groth16 proof.
+*   Checks `nullifierHash` is not spent.
+*   Locks `nullifierHash` to `authorizationId` (Pending state).
+*   Stores `requestHash` for finalization.
+
+**Step 3: Finalize Withdrawal (Relayer)**
+```solidity
+function finalizeZeroFeeWithdrawal(
+    uint256 nullifierHash,
+    uint256 authorizationId
+) external
+```
+*   Checks reservation matches `authorizationId`.
+*   Marks `nullifierHash` as SPENT.
+*   (Transfer happens via EIP-3009 `transferWithAuthorization` separately, or contract handles it depending on final implementation choice).
+    *   *Note: In V1 Spec, the EIP-3009 transfer is executed by the relayer against the Escrow EOA. The contract tracks the pool state.*
 
 ### Security Properties
 
-1. **Privacy:** Individual amounts never appear on-chain; only commitments
-2. **Integrity:** ZK proof ensures amounts sum correctly
-3. **Binding:** Poseidon commitment binds recipient + amount + salt
-4. **Non-replayable:** Claimed commitments marked, cannot double-claim
-
-## Salt Derivation
-
-Deterministic salt generation for claim links:
-
-```typescript
-async function deriveSalt(
-  masterSecret: string,
-  recipient: string,
-  identifier: string
-): Promise<bigint> {
-  const { poseidon, F } = await getPoseidon();
-
-  // Hash masterSecret and identifier to field elements
-  const secretHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(masterSecret));
-  const idHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identifier));
-
-  // Poseidon(secret, recipient, identifier) -> deterministic salt
-  const hash = poseidon([BigInt(secretHash), BigInt(recipient), BigInt(idHash)]);
-  return F.toObject(hash);
-}
-```
-
-**Why deterministic salts?**
-- Employer can regenerate claim links without storing them
-- Lost links can be recovered with master secret
-- Different identifier per payroll prevents cross-payroll replay
+1.  **Privacy:** The blockchain only knows the root. It doesn't know which leaf was spent or the amount (until the withdrawal happens, at which point the amount is visible only if not using a relayer mixer, but V1 focuses on sender privacy).
+    *   *Correction per V1 Spec:* The `requestHash` hides the parameters (recipient, amount) during reservation.
+2.  **Integrity:** Merkle Proof ensures the note exists.
+3.  **Double-Spend Protection:** Nullifier prevents reusing the same note.
+4.  **Front-Running Protection:** `requestHash` binds the proof to a specific recipient and relayer.
 
 ## Zero-Fee Architecture (Plasma)
 
 ### Escrow Model
-- Funds held in EOA escrow wallet
-- Escrow approves PrivatePayroll contract for `transferFrom`
-- Backend controls escrow private key for zero-fee claims
+*   Funds held in an Escrow EOA (externally owned account).
+*   Escrow approves `PrivatePayroll` for `transferFrom` (fallback).
+*   Escrow signs EIP-3009 authorizations for zero-fee transfers (primary path).
 
-### Gasless Claims (EIP-3009)
-```typescript
-// Backend signs authorization from escrow
-const { authorization, signature } = await signAuthorization(recipient, amount);
+### Withdrawal Flow
+1.  **User** generates proof client-side.
+2.  **User** sends proof + request params to Backend.
+3.  **Backend** validates proof.
+4.  **Backend** (as Relayer) calls `reserveZeroFeeWithdrawal` on-chain.
+5.  **Backend** executes EIP-3009 transfer from Escrow to Recipient.
+6.  **Backend** calls `finalizeZeroFeeWithdrawal` on-chain.
 
-// Plasma relayer submits zero-fee transfer
-await submitZeroFeeTransfer(userIp, authorization, signature);
+## Persistence
 
-// Contract marks claim as complete
-await markClaimedZeroFee(payrollId, commitmentIndex, recipient, amount, salt);
-```
-
-### Direct Claims (Fallback)
-- Recipient calls `claimPayment` directly
-- Pays gas in XPL
-- Contract pulls from escrow via `transferFrom`
-
-## Proof Generation Flow
-
-```
-1. User enters recipients + amounts in UI
-2. Frontend sends data to backend (/api/proof/generate)
-3. Backend generates deterministic salts + Poseidon commitments
-4. Backend runs snarkjs Groth16 prover (Node.js)
-5. Backend returns proof, commitments, and claim credentials
-6. Frontend submits proof to contract (or via gasless relay)
-7. Verifier.sol verifies proof on-chain
-8. If valid, funds escrowed with commitments
-```
-
-## Proof Format for Solidity
-
-snarkjs produces:
-```javascript
-{
-  pi_a: [x, y, 1],
-  pi_b: [[x1, x2], [y1, y2], [1, 0]],
-  pi_c: [x, y, 1]
-}
-```
-
-Solidity expects `uint256[8]` with B-coordinates swapped for BN254:
-```javascript
-const solidityProof = [
-  proof.pi_a[0],      // a.x
-  proof.pi_a[1],      // a.y
-  proof.pi_b[0][1],   // b[0][1] (swapped!)
-  proof.pi_b[0][0],   // b[0][0] (swapped!)
-  proof.pi_b[1][1],   // b[1][1] (swapped!)
-  proof.pi_b[1][0],   // b[1][0] (swapped!)
-  proof.pi_c[0],      // c.x
-  proof.pi_c[1],      // c.y
-];
-```
+The Backend (Hono + Postgres) is the critical availability layer. It must persist:
+1.  **Merkle Tree Structure:** To generate inclusion proofs.
+2.  **Note Secrets (Encrypted):** Optionally, or users store them.
+3.  **Nullifier State:** To prevent double-spending attempts before they hit the chain.
 
 ## Deployed Contracts (Plasma Testnet)
 
-| Contract | Address |
-|----------|---------|
-| PrivatePayroll | `0x924C2eb2A8Abd7A8afce79b80191da4076Bc0b47` |
-| Groth16 Verifier | `0x8Be848B25d4A92ca20DBd77B1c28b5e075b8Bd5a` |
-| PoseidonT4 | `0x5F4E76C5b8c6B61419BD2814b951e6C7B5Cbc573` |
-| USDT0 | `0x502012b361AebCE43b26Ec812B74D9a51dB4D412` |
-
-## Testing
-
-```bash
-# Run contract tests
-cd contracts && forge test -vvv
-
-# Output: 8/8 tests passing
-```
-
-Test coverage:
-- Proof verification
-- Payroll creation
-- Valid claims
-- Double-claim prevention
-- Invalid proof rejection
-- Commitment mismatch detection
+*   PrivatePayroll: `0x058a14e29824a11343663c22974D47f0c6188649`
+*   Verifier: `0x778b99c9Ecf72ADBa1A9A6997b0d7C7b8551cB0D`
+*   PoseidonT4: `0xe824F3FEE3748027F7E75cCEF76711858826C539`
+*   USDT0: `0x502012b361AebCE43b26Ec812B74D9a51dB4D412`

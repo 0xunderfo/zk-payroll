@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.19.9",
+    "@types/pg": "^8.16.0",
     "circomlibjs": "^0.1.7",
     "hono": "^4.0.0",
+    "pg": "^8.18.0",
     "snarkjs": "^0.7.6",
     "viem": "^2.0.0"
   },
